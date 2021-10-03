@@ -1,0 +1,2 @@
+# HaskellLabs
+ Haskell Lab Exercises
