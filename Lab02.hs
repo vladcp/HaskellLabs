@@ -114,6 +114,28 @@ perfects :: Int -> [Int]
 perfects x = [n | n <- [1..x], n == sum (factors n)]
 
 --exercise 16
+
+--replicate - outputs list contanining a repeated item 
+replicate' :: Int -> a -> [a]
+replicate' 1 x = [x]
+replicate' n x = [x] ++ replicate (n-1) x
+
+--take - takes first n items from list
+take' :: Int -> [a] -> [a]
+take' 0 xs = []
+take' n (x:xs) = [x] ++ take' (n-1) xs
+
+unzip' :: [(a,b)] -> ([a],[b])
+unzip' [(x,y)] = ([x],[y])
+unzip' ((x,y):zs) = (x:xs, y:ys) where (xs, ys) = unzip' zs
+
+reverse' :: [a] -> [a]
+reverse' [] = []
+reverse' [a] = [a]
+reverse' (x:xs) = reverse' xs ++ [x]
+
 --exercise 17
 approx_pi :: Float -> (Float, Int)
-approx_pi x =
+approx_pi 0 = (4, 0)
+approx_pi n =( ((4.0) * ((-1)^n) / (2*n + 1)) + fst (approx_pi (n-1)), snd(approx_pi (n-1)) + 1)
+
