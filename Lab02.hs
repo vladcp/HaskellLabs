@@ -135,7 +135,7 @@ reverse' [a] = [a]
 reverse' (x:xs) = reverse' xs ++ [x]
 
 --exercise 17
-approx_pi :: Float -> (Float, Int)
-approx_pi 0 = (4, 0)
-approx_pi n =( ((4.0) * ((-1)^n) / (2*n + 1)) + fst (approx_pi (n-1)), snd(approx_pi (n-1)) + 1)
+-- approx_pi :: Float -> (Float, Int)
+-- approx_pi 0 = (4, 0)
+-- approx_pi n =( ((4.0) * ((-1)^n) / (2*n + 1)) + fst (approx_pi (n-1)), snd(approx_pi (n-1)) + 1)
 
