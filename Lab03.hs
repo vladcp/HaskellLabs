@@ -28,6 +28,10 @@ height (Node (left) val (right)) = 1 + maximum[(height left), (height right)]
 test_tree = Node(Node Empty 5 Empty) 6 (Node(Node Empty 4 Empty) 7  Empty)
 test_tree2 = Node(Node Empty 5 Empty) 6 (Node Empty 7 Empty)
 
+--TODO EXERCISE 3
+
+
+
 --exercise 4 - compare shapes based on perimeter rather than area
 instance Ord Shape where
     compare (Circle r1) (Circle r2) = compare r1 r2
@@ -48,10 +52,13 @@ funcMap xs = map f (filter (p) xs)
 map' f = foldr g [] where
     g y ys = (f y):ys
 
+map1' f = foldr((:).f)[]
+
 filter' f = foldr g [] where
     g x xs | f x = x:xs
            | otherwise = xs
 
+------------------------------------
 --exercise 7
 mergesort :: (a->a->Bool) -> [a] -> [a]
 mergesort cmp [] = []
@@ -82,17 +89,45 @@ cmpTuples a b | snd a <= snd b = True
 halves :: [a] -> ([a], [a])
 halves xs = splitAt a xs where
         a = length  xs `div` 2
+------------------------------------
 
 --exercise 8
---maximum using fold functions
--- maximum' = foldr g [] where
---     g x xs = 
+--maximum using fold functions - foldl
+maximum' xs = foldl fun 0 xs where
+    fun x y | x > y = x
+            | otherwise = y
 
-maximum' = foldr fun [] where
-    fun x xs | [x] == xs = x
-           | x > maximum' xs = x
-           | otherwise = maximum' xs
-
+--recursive max, just for fun
 max' [x] = x
 max' (x:xs) | x > max' xs = x
             | otherwise = max' xs
+
+--exercise 9
+-- rewrite functions as list comprehensions
+
+--map (+3) xs
+exA xs = [(+3) x | x <- xs]
+--filter (>7) xs
+exB xs = [x | x<-xs, x>7]
+-- concat(map(\x -> map(\y -> (x,y)) ys) xs)
+exC xs ys = [(x,y) | x<-xs, y<-ys]
+exC' xs ys = concat(map(\x -> map(\y -> (x,y)) ys) xs)
+
+-- filter (>3) (map (\(x,y) -> x+y) xys)
+exD' xys = filter (>3) (map (\(x,y) -> x+y) xys)
+exD xys = [x+y | (x,y) <- xys, x+y > 3]
+
+--exercise 10 - function does nothing, just joins together every item in the list to a new list
+m xs = foldr (++) [] (map sing xs)
+    where 
+        sing x = [x]
+
+-- exercise 11
+--curry converts a function on pairs to a function that takes a series of arguments
+--aka curried function
+curry' :: ((a,b) -> c) -> a -> b -> c
+curry' f = \a -> (\b -> f(a,b))
+
+--uncurry converts curried function to function on pairs
+uncurry' :: (a -> b -> c) -> (a,b) -> c
+uncurry' f = \(a,b) -> f a b
