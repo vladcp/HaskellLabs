@@ -131,3 +131,5 @@ curry' f = \a -> (\b -> f(a,b))
 --uncurry converts curried function to function on pairs
 uncurry' :: (a -> b -> c) -> (a,b) -> c
 uncurry' f = \(a,b) -> f a b
+
+--last exercise - Bag.hs
