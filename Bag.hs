@@ -86,20 +86,23 @@ bagSum b (Bag []) = b
 bagSum (Bag b1) (Bag (b:bs)) = bagSum (Bag(elementInsert b b1)) (Bag bs)
 
 --bagintersection
-bagIntersection :: Eq a => [a] -> Bag a -> Bag a -> [a]
-bagIntersection [] b1 b2 =
-    let 
-        itemsB1 = elementsInBag b1
-        itemsB2 = elementsInBag b2
-        intersectedItems = intersect itemsB1 itemsB2
-    in
+-- bagIntersection :: Eq a => [a] -> Bag a -> Bag a -> [a]
+-- bagIntersection [] b1 b2 =
+--     let 
+--         itemsB1 = elementsInBag b1
+--         itemsB2 = elementsInBag b2
+--         intersectedItems = intersect itemsB1 itemsB2
+--     in
 
 
---return occurences of an item in a Bag
-getOccurences :: Eq a => a -> Bag a -> Int
-getOccurences a (Bag []) = 0
-getOccurences a (Bag (a1:as)) = if a == fst a1 then snd a1 else getOccurences a (Bag as)
+--return occurences of an item in a list like bag
+getOccurences :: Eq a => a -> [(a,Int)] -> Int
+getOccurences a = snd.head.filter (\(x,y) -> x == a)
 
 chooseItLeastOc :: Eq a =>[a] -> Bag a -> Bag a -> [(a,Int)]
-chooseItLeastOc (a:as) l1 l2 
-    | let n = getOccurences a l1 
+chooseItLeastOc (a:as) (Bag l1) (Bag l2) =
+     let
+         n = getOccurences a (elementsInBag l1) 
+         m = getOccurences a (elementsInBag l2)
+     in
+         [(a, min m n)] ++ chooseItLeastOc as (Bag l1) (Bag l2)
