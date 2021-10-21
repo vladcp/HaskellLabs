@@ -43,6 +43,9 @@ bagInsert a (Bag lst) = Bag (itemInsert a lst)
 elementsInBag :: Bag a -> [a]
 elementsInBag (Bag a) = fst (unzip a)
 
+--get just the list contained by bag
+getList :: Bag a -> [(a,Int)]
+getList (Bag x) = x
 --inserts item in a list that is contained by bag
 itemInsert :: Eq a => a -> [(a,Int)] -> [(a,Int)]
 itemInsert a lst =
@@ -85,24 +88,27 @@ bagSum b (Bag []) = b
 --insert every element from bag 2 to bag 1
 bagSum (Bag b1) (Bag (b:bs)) = bagSum (Bag(elementInsert b b1)) (Bag bs)
 
---bagintersection
--- bagIntersection :: Eq a => [a] -> Bag a -> Bag a -> [a]
--- bagIntersection [] b1 b2 =
---     let 
---         itemsB1 = elementsInBag b1
---         itemsB2 = elementsInBag b2
---         intersectedItems = intersect itemsB1 itemsB2
---     in
+--bag intersection`
+bagIntersection :: Eq a => Bag a -> Bag a -> Bag a
+bagIntersection b1 b2 =
+    let 
+        itemsB1 = elementsInBag b1
+        itemsB2 = elementsInBag b2
+        intersectedItems = intersect itemsB1 itemsB2
+    in
+        Bag (chooseItLeastOc intersectedItems (getList b1) (getList b2))
 
 
 --return occurences of an item in a list like bag
 getOccurences :: Eq a => a -> [(a,Int)] -> Int
 getOccurences a = snd.head.filter (\(x,y) -> x == a)
 
-chooseItLeastOc :: Eq a =>[a] -> Bag a -> Bag a -> [(a,Int)]
-chooseItLeastOc (a:as) (Bag l1) (Bag l2) =
+--choose items with least occurences from 2 lists
+chooseItLeastOc :: Eq a => [a] -> [(a,Int)] -> [(a,Int)] -> [(a,Int)]
+chooseItLeastOc [] l1 l2 = []
+chooseItLeastOc (a:as) l1 l2 =
      let
-         n = getOccurences a (elementsInBag l1) 
-         m = getOccurences a (elementsInBag l2)
+         n = getOccurences a l1
+         m = getOccurences a l2
      in
-         [(a, min m n)] ++ chooseItLeastOc as (Bag l1) (Bag l2)
+         [(a, min m n)] ++ (chooseItLeastOc as l1 l2)
