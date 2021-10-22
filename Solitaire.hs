@@ -49,13 +49,25 @@ module Solitaire where
     shuffle n d = [c | (c,m) <- sortBy cmp (zip d (randoms (mkStdGen n) :: [Int]))]
 
     -- datatypes - eight-off board  
-    type Foundations = [Deck]
+    type Foundations = [Card] 
     type Columns = [Deck]
-    type Reserve = [Deck]
-    data Board = EOBoard [Foundations, Columns, Reserve] deriving (Show)
+    type Reserve = [Card]
+    data Board = EOBoard Foundations Columns Reserve 
 
-    initialLayout :: EOBoard 
-    initialLayout = 
+
+    --declaring custom instance of Show
+    instance (Show Board) where 
+        show (EOBoard f c r) = "EOBoard " ++ "\n" ++
+            "Foundations" ++ (show f) ++ "\n" ++ 
+            "Columns" ++ "\n" ++
+            --show columns on different lines
+            show c ++ 
+            "Reserve " ++ (show r) 
+
+    initialLayout :: Board 
+    initialLayout = EOBoard [(Two,Clubs), (Two, Spades)] [[(Seven,Diamonds),(Ace,Hearts),(Queen,Hearts),(King,Clubs),(Four,Spades)],
+                    [(Five,Diamonds),(Queen,Spades),(Three,Diamonds),(Five,Spades),(Six,Spades),(Seven,Hearts)],
+                    [(King,Hearts),(Ten,Diamonds),(Seven,Spades),(Queen,Diamonds),(Five,Hearts),(Eight,Diamonds)]] [(Two,Hearts),(Six,Clubs),(Five,Clubs),(Jack,Diamonds)]
 
     testFunc :: [Card] -> Int
     testFunc c = length(pack)
