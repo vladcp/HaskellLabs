@@ -52,7 +52,7 @@ module Solitaire where
     type Foundations = [Deck]
     type Columns = [Deck]
     type Reserve = [Deck]
-    type EOBoard = [Foundations, Columns, Reserve]
+    data Board = EOBoard [Foundations, Columns, Reserve] deriving (Show)
 
     initialLayout :: EOBoard 
     initialLayout = 

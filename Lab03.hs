@@ -1,3 +1,8 @@
+{-
+Vlad Cristian Prisacariu
+Solutions for Work Sheet in week 3
+-}
+
 module Lab03 where
 import GHC.Classes (Ord)
 
