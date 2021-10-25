@@ -3,7 +3,7 @@ Solitaire.hs
 Stage One of the Graded Assignment
 
 Vlad-Cristian Prisacariu
-last modified: 21/10/2021
+last modified: 25/10/2021
 -}
 
 module Solitaire where
@@ -56,13 +56,22 @@ module Solitaire where
 
 
     --declaring custom instance of Show
+
+
     instance (Show Board) where 
         show (EOBoard f c r) = "EOBoard " ++ "\n" ++
-            "Foundations" ++ (show f) ++ "\n" ++ 
+            "Foundations  " ++ (show f) ++ "\n" ++ 
             "Columns" ++ "\n" ++
             --show columns on different lines
-            show c ++ 
-            "Reserve " ++ (show r) 
+            (showColumns c) ++ 
+            "Reserve  " ++ (show r) 
+         where
+             --show columns shows decks of columns
+             -- on separate lines
+             showColumns col = 
+                 concatMap (showOnNewLine) col
+                 where
+                     showOnNewLine d = (show d) ++ "\n"
 
     initialLayout :: Board 
     initialLayout = EOBoard [(Two,Clubs), (Two, Spades)] [[(Seven,Diamonds),(Ace,Hearts),(Queen,Hearts),(King,Clubs),(Four,Spades)],
@@ -72,3 +81,19 @@ module Solitaire where
     testFunc :: [Card] -> Int
     testFunc c = length(pack)
 
+    --eODeal takes a seed as a paramater
+    -- and deals a randomly shuffled deck for eight off 
+    eODeal :: Int -> Board
+    eODeal n = EOBoard [] columns reserve where
+        d = shuffle n pack
+        reserve = take 4 d 
+        d' = drop 4 d
+        columns = splitIntoColumns d'
+         where 
+             splitIntoColumns [] = []
+             splitIntoColumns deck = 
+                 [(take 8 deck)] ++ splitIntoColumns (drop 8 deck)
+    
+    --TODO
+    toFoundations :: Board -> Board
+    
