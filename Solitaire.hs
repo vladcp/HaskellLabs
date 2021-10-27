@@ -73,6 +73,7 @@ module Solitaire where
                  where
                      showOnNewLine d = (show d) ++ "\n"
 
+    --initial layout from the assignment brief
     initialLayout :: Board 
     initialLayout = EOBoard []
                     [[(Six,Clubs),(Seven,Diamonds),(Ace,Hearts),(Queen,Hearts),(King,Clubs),(Four,Spades)],
@@ -130,6 +131,7 @@ module Solitaire where
                 | c == sCard c' = True
                 | otherwise = canBePlaced c fnd
 
+    --place a card to the foundations
     placeOnFoundation :: Card -> Foundations -> Foundations
     placeOnFoundation c []
                         | isAce c = [c]
@@ -138,3 +140,6 @@ module Solitaire where
                         | isAce c = c:f
                         | c == sCard c' = c:fnd
                         | otherwise = c':(placeOnFoundation c fnd)
+
+    --SPIDER SOLITAIRE
+    
