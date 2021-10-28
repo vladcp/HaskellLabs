@@ -16,12 +16,24 @@ module Solitaire where
               | Eight | Nine | Ten | Jack | Queen
               | King | Ace deriving (Show,Eq, Enum)
     type Card = (Pip, Suit) 
-    type Deck = [Card] 
+    type Deck = [SCard] 
 
-    -- constants and untilities
+    --SPIDER SOLITAIRE TODO
+    data SCard = Card Card Bool
+    instance (Show SCard) where
+        show (Card c visible) = if visible then show c else "<unknown>"
+    
+    --return only the (pip,suit) of a card, regardless of visibility
+    getCard :: SCard -> Card
+    getCard (Card c v) = c
+
+    toggleVisibility :: SCard -> SCard
+    toggleVisibility (Card c v) = Card c (not v)
     -- Suit and Pip must derive Enum for this
-    pack :: Deck 
-    pack = [(pip, suit) | suit <- [Hearts .. Diamonds], pip <- [Two .. Ace]]
+    -- we can choose to have cards facing up or facing down
+    -- True -> all cards are visible
+    pack :: Bool -> Deck 
+    pack visible = [Card (pip, suit) visible | suit <- [Hearts .. Diamonds], pip <- [Two .. Ace]]
 
     -- sCard returns successor card
     sCard :: Card -> Card
@@ -49,48 +61,69 @@ module Solitaire where
     shuffle n d = [c | (c,m) <- sortBy cmp (zip d (randoms (mkStdGen n) :: [Int]))]
 
     -- datatypes - eight-off board  
-    type Foundations = [Card] 
+    type Foundations = [SCard] 
     type Columns = [Deck]
-    type Reserve = [Card]
-    data Board = EOBoard Foundations Columns Reserve 
+    type Reserve = [SCard]
+    data Board = EOBoard Foundations Columns Reserve | SBoard Foundations Columns Stock
 
+    -- --TODO
+    -- datatypes - Spider Solitaire
+    data Stock = Stock Deck
+    instance (Show Stock) where
+        show (Stock d) = (show x) ++ " Deals remaining" 
+                    where  x = (length d) `div` 10
+    --     -- foundations can be the same
+    --     -- there are 10 columns, and some cards are not visible
+    --     -- 6 cards in first 4 piles, 5 cards in the rest 6 piles
+    --     --stock has 50 cards initially, and you can deal 10 cards from the stock at any time
+    --             --if there are no empty columns
 
-    --declaring custom instance of Show
-
-
+    -- --declaring custom instance of Show
     instance (Show Board) where 
-        show (EOBoard f c r) = "EOBoard " ++ "\n" ++
-            "Foundations  " ++ (show f) ++ "\n" ++ 
-            "Columns" ++ "\n" ++
-            --show columns on different lines
-            (showColumns c) ++ 
-            "Reserve  " ++ (show r) 
-         where
-             --show columns shows decks of columns
-             -- on separate lines
-             showColumns col = 
-                 concatMap (showOnNewLine) col
-                 where
-                     showOnNewLine d = (show d) ++ "\n"
+        show Board = boardShow Board
+            where 
+            boardShow (EOBoard f c r) = "EOBoard " ++ "\n" ++
+                "Foundations  " ++ (show f) ++ "\n" ++ 
+                "Columns" ++ "\n" ++
+                --show columns on different lines
+                (showColumns c) ++ 
+                "Reserve  " ++ (show r) 
 
-    --initial layout from the assignment brief
-    initialLayout :: Board 
-    initialLayout = EOBoard []
-                    [[(Six,Clubs),(Seven,Diamonds),(Ace,Hearts),(Queen,Hearts),(King,Clubs),(Four,Spades)],
-                    [(Five,Diamonds), (Queen,Clubs),(Three,Diamonds),(Five,Spades),(Six,Spades),(Seven,Hearts)],
-                    [(King,Hearts),(Ten,Diamonds),(Seven,Spades),(Queen,Diamonds),(Five,Hearts),(Eight,Diamonds)],
-                    [(Jack,Spades),(Six,Hearts),(Seven,Clubs),(Eight,Spades),(Ten,Clubs),(Queen,Clubs)],
-                    [(Ace,Spades),(Eight,Clubs),(Ace,Diamonds),(King,Diamonds),(Jack,Hearts),(Four,Clubs)],
-                    [(Two,Diamonds),(Three,Hearts),(Two,Hearts),(Ten,Hearts),(Six,Diamonds),(Jack,Clubs)],
-                    [(Nine,Spades),(Four,Diamonds),(Nine,Clubs),(Nine,Hearts),(Three,Spades),(Ten,Spades)],
-                    [(Two,Clubs),(Two,Spades),(Four,Hearts),(Nine,Diamonds),(King,Spades),(Eight,Hearts)]
-                    ] [(Three,Clubs),(Ace,Clubs),(Five,Clubs),(Jack,Diamonds)]
+            boardShow (SBoard f c s) = "SBoard " ++ "\n" ++ 
+                "Foundations " ++ (show f) ++ "\n" ++ 
+                "Columns" ++ "\n" ++ 
+                (showColumns c) ++ 
+                "Stock " ++ (show s)
+                --show columns shows decks of columns
+                -- on separate lines
+            showColumns col = concatMap (showOnNewLine) col
+                where
+                    showOnNewLine d = (show d) ++ "\n"   
 
-    --eODeal takes a seed as a paramater
-    -- and deals a randomly shuffled deck for eight off 
+    -- --initial layout from the assignment brief
+    -- initialLayout :: Board 
+    -- initialLayout = EOBoard []
+    --                 [[(Six,Clubs),(Seven,Diamonds),(Ace,Hearts),(Queen,Hearts),(King,Clubs),(Four,Spades)],
+    --                 [(Five,Diamonds), (Queen,Clubs),(Three,Diamonds),(Five,Spades),(Six,Spades),(Seven,Hearts)],
+    --                 [(King,Hearts),(Ten,Diamonds),(Seven,Spades),(Queen,Diamonds),(Five,Hearts),(Eight,Diamonds)],
+    --                 [(Jack,Spades),(Six,Hearts),(Seven,Clubs),(Eight,Spades),(Ten,Clubs),(Queen,Clubs)],
+    --                 [(Ace,Spades),(Eight,Clubs),(Ace,Diamonds),(King,Diamonds),(Jack,Hearts),(Four,Clubs)],
+    --                 [(Two,Diamonds),(Three,Hearts),(Two,Hearts),(Ten,Hearts),(Six,Diamonds),(Jack,Clubs)],
+    --                 [(Nine,Spades),(Four,Diamonds),(Nine,Clubs),(Nine,Hearts),(Three,Spades),(Ten,Spades)],
+    --                 [(Two,Clubs),(Two,Spades),(Four,Hearts),(Nine,Diamonds),(King,Spades),(Eight,Hearts)]
+    --                 ] [(Three,Clubs),(Ace,Clubs),(Five,Clubs),(Jack,Diamonds)]
+
+    -- initialSBoard :: Board 
+    -- initialSBoard = SBoard [Card (King, Hearts) True]
+    --                 [[Card (Eight,Diamonds) True, Card (Nine,Hearts) True],
+    --                 [Card (Ace,Spades) True, Card (Two,Spades) True, Card (Three,Spades) True, Card (Four,Spades) True ,Card (Five,Spades) True, Card (Six,Clubs) True, 
+    --                 Card (Seven,Clubs) True, Card (Eight,Clubs) True, Card (Nine,Clubs) True, Card (Ten,Diamonds) True, Card (Jack,Diamonds) True,Card (Queen,Diamonds) True, Card (King,Diamonds) True]]
+    --                 [[]]
+    -- --eODeal takes a seed as a paramater
+    -- -- and deals a randomly shuffled deck for eight off 
     eODeal :: Int -> Board
     eODeal n = EOBoard [] columns reserve where
-        d = shuffle n pack
+        d = shuffle n (pack True) --True means all cards are visible
         reserve = take 4 d 
         d' = drop 4 d
         columns = splitIntoColumns d'
@@ -99,11 +132,10 @@ module Solitaire where
              splitIntoColumns deck = 
                  [(take 8 deck)] ++ splitIntoColumns (drop 8 deck)
     
-    --TODO
     toFoundations :: Board -> Board 
     toFoundations (EOBoard f c r) = toFoundationsColumns [] (EOBoard f c r)
 
-    --retry to place reserves to foundations every time we place a card from columns to foundations
+    -- --retry to place reserves to foundations every time we place a card from columns to foundations
     toFoundationsColumns :: Columns -> Board -> Board
     toFoundationsColumns aux (EOBoard f [] r) = EOBoard f aux r
     toFoundationsColumns aux (EOBoard f (c:cols) r) 
@@ -121,25 +153,30 @@ module Solitaire where
                 |  canBePlaced r f = toFoundationsReserve [] (aux++rs) (placeOnFoundation r f)
                 |  otherwise = toFoundationsReserve (aux ++ [r]) rs f
     
-    --can a card be placed into the foundations
-    canBePlaced :: Card -> Foundations -> Bool
-    canBePlaced c [] 
+    -- --can a card be placed into the foundations
+    canBePlaced :: SCard -> Foundations -> Bool
+    canBePlaced card [] 
                 | isAce c = True
                 | otherwise = False
-    canBePlaced c (c':fnd)
+                where c = getCard card
+    canBePlaced card (card':fnd)
                 | isAce c = True
                 | c == sCard c' = True
-                | otherwise = canBePlaced c fnd
+                | otherwise = canBePlaced card fnd
+                where 
+                    c = getCard card
+                    c' = getCard card'
 
     --place a card to the foundations
-    placeOnFoundation :: Card -> Foundations -> Foundations
-    placeOnFoundation c []
-                        | isAce c = [c]
+    placeOnFoundation :: SCard -> Foundations -> Foundations
+    placeOnFoundation card []
+                        | isAce c = [card]
                         | otherwise = []
-    placeOnFoundation c f@(c':fnd) 
-                        | isAce c = c:f
-                        | c == sCard c' = c:fnd
-                        | otherwise = c':(placeOnFoundation c fnd)
-
-    --SPIDER SOLITAIRE
-    
+                        where c = getCard card
+    placeOnFoundation card f@(card':fnd) 
+                        | isAce c = card:f
+                        | c == sCard c' = card:fnd
+                        | otherwise = card':(placeOnFoundation card fnd)
+                        where 
+                            c = getCard card
+                            c' = getCard card'
