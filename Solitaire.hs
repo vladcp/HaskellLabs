@@ -19,7 +19,7 @@ module Solitaire where
     type Deck = [SCard] 
 
     --SPIDER SOLITAIRE TODO
-    data SCard = Card Card Bool
+    data SCard = Card Card Bool  
     instance (Show SCard) where
         show (Card c visible) = if visible then show c else "<unknown>"
     
@@ -112,12 +112,12 @@ module Solitaire where
     --                 [(Two,Clubs),(Two,Spades),(Four,Hearts),(Nine,Diamonds),(King,Spades),(Eight,Hearts)]
     --                 ] [(Three,Clubs),(Ace,Clubs),(Five,Clubs),(Jack,Diamonds)]
 
-    -- initialSBoard :: Board 
-    -- initialSBoard = SBoard [Card (King, Hearts) True]
-    --                 [[Card (Eight,Diamonds) True, Card (Nine,Hearts) True],
-    --                 [Card (Ace,Spades) True, Card (Two,Spades) True, Card (Three,Spades) True, Card (Four,Spades) True ,Card (Five,Spades) True, Card (Six,Clubs) True, 
-    --                 Card (Seven,Clubs) True, Card (Eight,Clubs) True, Card (Nine,Clubs) True, Card (Ten,Diamonds) True, Card (Jack,Diamonds) True,Card (Queen,Diamonds) True, Card (King,Diamonds) True]]
-    --                 [[]]
+    initialSBoard :: Board 
+    initialSBoard = SBoard [Card (King, Hearts) True]
+                    [[Card (Eight,Diamonds) True, Card (Nine,Hearts) True],
+                    [Card (Ace,Spades) True, Card (Two,Spades) True, Card (Three,Spades) True, Card (Four,Spades) True ,Card (Five,Spades) True, Card (Six,Clubs) True, 
+                    Card (Seven,Clubs) True, Card (Eight,Clubs) True, Card (Nine,Clubs) True, Card (Ten,Diamonds) True, Card (Jack,Diamonds) True,Card (Queen,Diamonds) True, Card (King,Diamonds) True]]
+                    [[]]
 
     ---------- EIGHT OFF FUNCTIONS ----------
     --eODeal takes a seed as a paramater
@@ -130,28 +130,31 @@ module Solitaire where
          where 
              splitIntoColumns [] = []
              splitIntoColumns deck = 
-                 [(take 8 deck)] ++ splitIntoColumns (drop 8 deck)
+                 [(take 6 deck)] ++ splitIntoColumns (drop 6 deck)
     
     toFoundations :: Board -> Board 
-    toFoundations (EOBoard f c r) = toFoundationsColumns [] (EOBoard f c r)
-
+    toFoundations (EOBoard f c r) = toFoundationsColumns [] (EOBoard f' c r') --start with trying the reserve
+        where
+            (r',f') = toFoundationsReserve [] r f
     --retry to place reserves to foundations every time we place a card from columns to foundations
     toFoundationsColumns :: Columns -> Board -> Board
     toFoundationsColumns aux (EOBoard f [] r) = EOBoard f aux r
     toFoundationsColumns aux (EOBoard f (c:cols) r) 
-         | canBePlaced top f = toFoundationsColumns [] (EOBoard f' (aux ++ ((tail c):cols)) r')
+        -- if a column card can be placed, 
+         | canBePlaced top f = toFoundationsColumns [] (EOBoard f' (aux ++ ((tail c):cols)) r') 
          | otherwise = toFoundationsColumns (aux ++ [c]) (EOBoard f cols r)
          where
              top = head c
-             (r',f') = toFoundationsReserve [] r (placeOnFoundation top f)
+             (r',f') = toFoundationsReserve [] r (placeOnFoundation top f) 
 
+            -- f' -> foundation after we placed all possible reserves
     toFoundationsReserve :: Reserve -> Reserve -> Foundations -> (Reserve,Foundations)
     toFoundationsReserve [] [] f = ([], f)
     toFoundationsReserve aux [] f = (aux, f)
     toFoundationsReserve aux (r:rs) f 
                 |  canBePlaced r f = toFoundationsReserve [] (aux++rs) (placeOnFoundation r f)
                 |  otherwise = toFoundationsReserve (aux ++ [r]) rs f
-    
+
     --can a card be placed into the foundations?
     canBePlaced :: SCard -> Foundations -> Bool
     canBePlaced card [] 
@@ -166,7 +169,7 @@ module Solitaire where
                     c = getCard card
                     c' = getCard card'
 
-    -- place a card to the foundations
+    -- place a card to the foundations, return the foundations
     placeOnFoundation :: SCard -> Foundations -> Foundations
     placeOnFoundation card []
                         | isAce c = [card]
