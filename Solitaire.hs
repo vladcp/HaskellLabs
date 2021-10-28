@@ -66,7 +66,6 @@ module Solitaire where
     type Reserve = [SCard]
     data Board = EOBoard Foundations Columns Reserve | SBoard Foundations Columns Stock
 
-    -- --TODO
     -- datatypes - Spider Solitaire
     data Stock = Stock Deck
     instance (Show Stock) where
@@ -80,7 +79,7 @@ module Solitaire where
 
     -- --declaring custom instance of Show
     instance (Show Board) where 
-        show Board = boardShow Board
+        show b = boardShow b
             where 
             boardShow (EOBoard f c r) = "EOBoard " ++ "\n" ++
                 "Foundations  " ++ (show f) ++ "\n" ++ 
@@ -119,14 +118,15 @@ module Solitaire where
     --                 [Card (Ace,Spades) True, Card (Two,Spades) True, Card (Three,Spades) True, Card (Four,Spades) True ,Card (Five,Spades) True, Card (Six,Clubs) True, 
     --                 Card (Seven,Clubs) True, Card (Eight,Clubs) True, Card (Nine,Clubs) True, Card (Ten,Diamonds) True, Card (Jack,Diamonds) True,Card (Queen,Diamonds) True, Card (King,Diamonds) True]]
     --                 [[]]
-    -- --eODeal takes a seed as a paramater
-    -- -- and deals a randomly shuffled deck for eight off 
+
+    ---------- EIGHT OFF FUNCTIONS ----------
+    --eODeal takes a seed as a paramater
+    -- and deals a randomly shuffled deck for eight off 
     eODeal :: Int -> Board
     eODeal n = EOBoard [] columns reserve where
         d = shuffle n (pack True) --True means all cards are visible
         reserve = take 4 d 
-        d' = drop 4 d
-        columns = splitIntoColumns d'
+        columns = splitIntoColumns (drop 4 d)
          where 
              splitIntoColumns [] = []
              splitIntoColumns deck = 
@@ -135,7 +135,7 @@ module Solitaire where
     toFoundations :: Board -> Board 
     toFoundations (EOBoard f c r) = toFoundationsColumns [] (EOBoard f c r)
 
-    -- --retry to place reserves to foundations every time we place a card from columns to foundations
+    --retry to place reserves to foundations every time we place a card from columns to foundations
     toFoundationsColumns :: Columns -> Board -> Board
     toFoundationsColumns aux (EOBoard f [] r) = EOBoard f aux r
     toFoundationsColumns aux (EOBoard f (c:cols) r) 
@@ -145,7 +145,6 @@ module Solitaire where
              top = head c
              (r',f') = toFoundationsReserve [] r (placeOnFoundation top f)
 
-
     toFoundationsReserve :: Reserve -> Reserve -> Foundations -> (Reserve,Foundations)
     toFoundationsReserve [] [] f = ([], f)
     toFoundationsReserve aux [] f = (aux, f)
@@ -153,7 +152,7 @@ module Solitaire where
                 |  canBePlaced r f = toFoundationsReserve [] (aux++rs) (placeOnFoundation r f)
                 |  otherwise = toFoundationsReserve (aux ++ [r]) rs f
     
-    -- --can a card be placed into the foundations
+    --can a card be placed into the foundations?
     canBePlaced :: SCard -> Foundations -> Bool
     canBePlaced card [] 
                 | isAce c = True
@@ -167,7 +166,7 @@ module Solitaire where
                     c = getCard card
                     c' = getCard card'
 
-    --place a card to the foundations
+    -- place a card to the foundations
     placeOnFoundation :: SCard -> Foundations -> Foundations
     placeOnFoundation card []
                         | isAce c = [card]
@@ -180,3 +179,26 @@ module Solitaire where
                         where 
                             c = getCard card
                             c' = getCard card'
+
+    ---------- SPIDER SOLITAIRE FUNCTIONS ----------
+    sDeal :: Int -> Board
+    sDeal n = SBoard [] c s where
+        -- start with a facing down deck (containing 2 packs)
+        d = (shuffle n (pack False)) ++ (shuffle n (pack False))
+        s = Stock (take 50 d)
+        c = makeFstCrdVis (splitIntoColumns (drop 50 d))
+         where 
+            makeFstCrdVis [] = []
+            --make first card of each column visible
+            makeFstCrdVis (c:crds) =
+                 ((toggleVisibility (head c)) : (drop 1 c)) : (makeFstCrdVis crds)
+
+            splitIntoColumns [] = []
+            splitIntoColumns d = (splitFirst (take 24 d)) ++ (splitSecond (drop 24 d))
+             where 
+                 --first 4 columns have 6 cards each
+                splitFirst [] = []
+                splitFirst d = [(take 6 d)] ++ splitFirst (drop 6 d)
+                -- last 6 columns have 5 cards each
+                splitSecond [] = []
+                splitSecond d = [(take 5 d)] ++ splitSecond (drop 5 d)
