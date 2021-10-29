@@ -116,7 +116,15 @@ module Solitaire where
     initialSBoard = SBoard [Card (King, Hearts) True]
                     [[Card (Eight,Diamonds) True, Card (Nine,Hearts) True],
                     [Card (Ace,Spades) True, Card (Two,Spades) True, Card (Three,Spades) True, Card (Four,Spades) True ,Card (Five,Spades) True, Card (Six,Clubs) True, 
-                    Card (Seven,Clubs) True, Card (Eight,Clubs) True, Card (Nine,Clubs) True, Card (Ten,Diamonds) True, Card (Jack,Diamonds) True,Card (Queen,Diamonds) True, Card (King,Diamonds) True]]
+                    Card (Seven,Clubs) True, Card (Eight,Clubs) True, Card (Nine,Clubs) True, Card (Ten,Diamonds) True, Card (Jack,Diamonds) True,Card (Queen,Diamonds) True, Card (King,Diamonds) True],
+                    [Card (Seven,Clubs) True, Card (Eight, Diamonds) True, Card (Nine,Diamonds) True, Card (Ten,Diamonds) True, Card (Jack,Diamonds) True, Card (Queen, Diamonds) True, Card(King,Diamonds) True,
+                    Card (Nine,Clubs) True, Card (Ten,Hearts) True, Card (Jack,Clubs) True],
+                    [Card (Ace, Hearts) True, Card (Two,Hearts) True, Card (Three, Hearts) True, Card (Four, Hearts) True, Card (Five,Hearts) True, Card (Six,Diamonds) True, 
+                    Card (Seven,Diamonds) True, Card (Queen,Clubs) True, Card (King, Hearts) True],
+                    [Card (Two,Diamonds) True, Card (Three, Diamonds) True, Card (Four, Diamonds) True],
+                    [Card (Jack,Clubs) True, Card (Queen,Clubs) True, Card (King,Clubs) True, Card (Two, Spades) True, Card (Three,Spades) True, Card (Four,Diamonds) True, Card (Five,Diamonds) True,
+                    Card (Six,Diamonds) True, Card (Seven, Hearts) True, Card (Eight, Clubs) True]
+                    ]
                     [[]]
 
     ---------- EIGHT OFF FUNCTIONS ----------
