@@ -29,6 +29,7 @@ module Solitaire where
 
     toggleVisibility :: SCard -> SCard
     toggleVisibility (Card c v) = Card c (not v)
+    
     -- Suit and Pip must derive Enum for this
     -- we can choose to have cards facing up or facing down
     -- True -> all cards are visible
@@ -64,7 +65,6 @@ module Solitaire where
     type Foundations = [SCard] 
     type Columns = [Deck]
     type Reserve = [SCard]
-    data Board = EOBoard Foundations Columns Reserve | SBoard Foundations Columns Stock
 
     -- datatypes - Spider Solitaire
     data Stock = Stock Deck
@@ -76,7 +76,9 @@ module Solitaire where
     --     -- 6 cards in first 4 piles, 5 cards in the rest 6 piles
     --     --stock has 50 cards initially, and you can deal 10 cards from the stock at any time
     --             --if there are no empty columns
-
+    
+    -- board 
+    data Board = EOBoard Foundations Columns Reserve | SBoard Foundations Columns Stock
     -- --declaring custom instance of Show
     instance (Show Board) where 
         show b = boardShow b
@@ -112,20 +114,20 @@ module Solitaire where
     --                 [(Two,Clubs),(Two,Spades),(Four,Hearts),(Nine,Diamonds),(King,Spades),(Eight,Hearts)]
     --                 ] [(Three,Clubs),(Ace,Clubs),(Five,Clubs),(Jack,Diamonds)]
 
-    initialSBoard :: Board 
-    initialSBoard = SBoard [Card (King, Hearts) True]
-                    [[Card (Eight,Diamonds) True, Card (Nine,Hearts) True],
-                    [Card (Ace,Spades) True, Card (Two,Spades) True, Card (Three,Spades) True, Card (Four,Spades) True ,Card (Five,Spades) True, Card (Six,Clubs) True, 
-                    Card (Seven,Clubs) True, Card (Eight,Clubs) True, Card (Nine,Clubs) True, Card (Ten,Diamonds) True, Card (Jack,Diamonds) True,Card (Queen,Diamonds) True, Card (King,Diamonds) True],
-                    [Card (Seven,Clubs) True, Card (Eight, Diamonds) True, Card (Nine,Diamonds) True, Card (Ten,Diamonds) True, Card (Jack,Diamonds) True, Card (Queen, Diamonds) True, Card(King,Diamonds) True,
-                    Card (Nine,Clubs) True, Card (Ten,Hearts) True, Card (Jack,Clubs) True],
-                    [Card (Ace, Hearts) True, Card (Two,Hearts) True, Card (Three, Hearts) True, Card (Four, Hearts) True, Card (Five,Hearts) True, Card (Six,Diamonds) True, 
-                    Card (Seven,Diamonds) True, Card (Queen,Clubs) True, Card (King, Hearts) True],
-                    [Card (Two,Diamonds) True, Card (Three, Diamonds) True, Card (Four, Diamonds) True],
-                    [Card (Jack,Clubs) True, Card (Queen,Clubs) True, Card (King,Clubs) True, Card (Two, Spades) True, Card (Three,Spades) True, Card (Four,Diamonds) True, Card (Five,Diamonds) True,
-                    Card (Six,Diamonds) True, Card (Seven, Hearts) True, Card (Eight, Clubs) True]
-                    ]
-                    [[]]
+    -- initialSBoard :: Board 
+    -- initialSBoard = SBoard [Card (King, Hearts) True]
+    --                 [[Card (Eight,Diamonds) True, Card (Nine,Hearts) True],
+    --                 [Card (Ace,Spades) True, Card (Two,Spades) True, Card (Three,Spades) True, Card (Four,Spades) True ,Card (Five,Spades) True, Card (Six,Clubs) True, 
+    --                 Card (Seven,Clubs) True, Card (Eight,Clubs) True, Card (Nine,Clubs) True, Card (Ten,Diamonds) True, Card (Jack,Diamonds) True,Card (Queen,Diamonds) True, Card (King,Diamonds) True],
+    --                 [Card (Seven,Clubs) True, Card (Eight, Diamonds) True, Card (Nine,Diamonds) True, Card (Ten,Diamonds) True, Card (Jack,Diamonds) True, Card (Queen, Diamonds) True, Card(King,Diamonds) True,
+    --                 Card (Nine,Clubs) True, Card (Ten,Hearts) True, Card (Jack,Clubs) True],
+    --                 [Card (Ace, Hearts) True, Card (Two,Hearts) True, Card (Three, Hearts) True, Card (Four, Hearts) True, Card (Five,Hearts) True, Card (Six,Diamonds) True, 
+    --                 Card (Seven,Diamonds) True, Card (Queen,Clubs) True, Card (King, Hearts) True],
+    --                 [Card (Two,Diamonds) True, Card (Three, Diamonds) True, Card (Four, Diamonds) True],
+    --                 [Card (Jack,Clubs) True, Card (Queen,Clubs) True, Card (King,Clubs) True, Card (Two, Spades) True, Card (Three,Spades) True, Card (Four,Diamonds) True, Card (Five,Diamonds) True,
+    --                 Card (Six,Diamonds) True, Card (Seven, Hearts) True, Card (Eight, Clubs) True]
+    --                 ]
+    --                 [[]]
 
     ---------- EIGHT OFF FUNCTIONS ----------
     --eODeal takes a seed as a paramater
@@ -141,9 +143,11 @@ module Solitaire where
                  [(take 6 deck)] ++ splitIntoColumns (drop 6 deck)
     
     toFoundations :: Board -> Board 
-    toFoundations (EOBoard f c r) = toFoundationsColumns [] (EOBoard f' c r') --start with trying the reserve
+    toFoundations (EOBoard f c r) = toFoundationsColumns [] (EOBoard f' c r') 
         where
+            --start with trying to put the reserve to foundations
             (r',f') = toFoundationsReserve [] r f
+
     --retry to place reserves to foundations every time we place a card from columns to foundations
     toFoundationsColumns :: Columns -> Board -> Board
     toFoundationsColumns aux (EOBoard f [] r) = EOBoard f aux r
