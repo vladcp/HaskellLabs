@@ -31,7 +31,7 @@ replace orig new [] = []
 replace orig new (x:xs) 
     | orig == prefix = new ++ replace orig new rest 
     | otherwise = x : replace orig new xs
-        where(prefix, rest) = splitAt(length orig) (x:xs)
+        where (prefix, rest) = splitAt(length orig) (x:xs)
 
 --  generate list of primes
 primes :: [Int]
