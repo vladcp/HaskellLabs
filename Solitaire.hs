@@ -12,9 +12,9 @@ module Solitaire where
     import Debug.Trace
     -- datatypes - basics
     data Suit = Hearts | Clubs | Spades | Diamonds deriving (Show, Eq, Enum)
-    data Pip = Two | Three | Four | Five | Six | Seven
+    data Pip = Ace | Two | Three | Four | Five | Six | Seven
               | Eight | Nine | Ten | Jack | Queen
-              | King | Ace deriving (Show,Eq, Enum)
+              | King deriving (Show,Eq, Enum)
     type Card = (Pip, Suit) 
     type Deck = [SCard] 
 
@@ -39,13 +39,13 @@ module Solitaire where
     -- sCard returns successor card
     sCard :: Card -> Card
     sCard (p, s) 
-        | p == Ace = (Two, s) --if Ace - go back to two
+        | p == King = (Ace, s) --if Ace - go back to two
         | otherwise = (succ p, s)
 
     --pCard returns predecessor card
     pCard :: Card -> Card
     pCard (p,s) 
-        | p == Two = (Ace, s)
+        | p == Ace = (King, s)
         | otherwise = (pred p, s)
 
     --check if a card is an Ace
@@ -88,7 +88,7 @@ module Solitaire where
                 "Columns" ++ "\n" ++
                 --show columns on different lines
                 (showColumns c) ++ 
-                "Reserve  " ++ (show r) 
+                "Reserve  " ++ (show r) ++ "\n\n" 
 
             boardShow (SBoard f c s) = "SBoard " ++ "\n" ++ 
                 "Foundations " ++ (show f) ++ "\n" ++ 
@@ -102,17 +102,17 @@ module Solitaire where
                     showOnNewLine d = (show d) ++ "\n"   
 
     -- --initial layout from the assignment brief
-    -- initialLayout :: Board 
-    -- initialLayout = EOBoard []
-    --                 [[(Six,Clubs),(Seven,Diamonds),(Ace,Hearts),(Queen,Hearts),(King,Clubs),(Four,Spades)],
-    --                 [(Five,Diamonds), (Queen,Clubs),(Three,Diamonds),(Five,Spades),(Six,Spades),(Seven,Hearts)],
-    --                 [(King,Hearts),(Ten,Diamonds),(Seven,Spades),(Queen,Diamonds),(Five,Hearts),(Eight,Diamonds)],
-    --                 [(Jack,Spades),(Six,Hearts),(Seven,Clubs),(Eight,Spades),(Ten,Clubs),(Queen,Clubs)],
-    --                 [(Ace,Spades),(Eight,Clubs),(Ace,Diamonds),(King,Diamonds),(Jack,Hearts),(Four,Clubs)],
-    --                 [(Two,Diamonds),(Three,Hearts),(Two,Hearts),(Ten,Hearts),(Six,Diamonds),(Jack,Clubs)],
-    --                 [(Nine,Spades),(Four,Diamonds),(Nine,Clubs),(Nine,Hearts),(Three,Spades),(Ten,Spades)],
-    --                 [(Two,Clubs),(Two,Spades),(Four,Hearts),(Nine,Diamonds),(King,Spades),(Eight,Hearts)]
-    --                 ] [(Three,Clubs),(Ace,Clubs),(Five,Clubs),(Jack,Diamonds)]
+    initialLayout :: Board 
+    initialLayout = EOBoard []
+                    [[Card (Six,Clubs) True,Card(Seven,Diamonds)True,Card(Ace,Hearts) True,Card(Queen,Hearts) True,Card(King,Clubs) True,Card(Four,Spades)True],
+                    [Card(Five,Diamonds)True, Card(Queen,Clubs)True,Card(Three,Diamonds)True,Card(Five,Spades)True,Card(Six,Spades)True,Card(Seven,Hearts)True],
+                    [Card(King,Hearts)True,Card(Ten,Diamonds)True,Card(Seven,Spades)True,Card(Queen,Diamonds)True,Card(Five,Hearts)True,Card(Eight,Diamonds)True],
+                    [Card(Jack,Spades)True,Card(Six,Hearts)True,Card(Seven,Clubs)True,Card(Eight,Spades)True,Card(Ten,Clubs)True,Card(Queen,Clubs)True],
+                    [Card(Ace,Spades)True,Card(Eight,Clubs)True,Card(Ace,Diamonds)True,Card(King,Diamonds)True,Card(Jack,Hearts)True,Card(Four,Clubs)True],
+                    [Card(Two,Diamonds)True,Card(Three,Hearts)True,Card(Two,Hearts)True,Card(Ten,Hearts)True,Card(Six,Diamonds)True,Card(Jack,Clubs)True],
+                    [Card(Nine,Spades)True,Card(Four,Diamonds)True,Card(Nine,Clubs)True,Card(Nine,Hearts)True,Card(Three,Spades)True,Card(Ten,Spades)True],
+                    [Card(Two,Clubs)True,Card(Two,Spades)True,Card(Four,Hearts)True,Card(Nine,Diamonds)True,Card(King,Spades)True,Card(Eight,Hearts)True]
+                    ] [Card(Three,Clubs)True,Card(Ace,Clubs)True,Card(Five,Clubs)True,Card(Jack,Diamonds)True]
 
     -- initialSBoard :: Board 
     -- initialSBoard = SBoard [Card (King, Hearts) True]
@@ -195,6 +195,95 @@ module Solitaire where
                             c = getCard card
                             c' = getCard card'
 
+
+    ---------- PART 2 FUNCTIONS ---------- 
+    testReserve :: Reserve
+    testReserve = [Card(Three,Clubs)True,Card(Ace,Clubs)True,Card(Five,Clubs)True,Card(Jack,Diamonds)True]
+
+    testColumn :: Deck
+    testColumn = [Card (Six,Clubs) True,Card(Seven,Diamonds)True,Card(Ace,Hearts) True,Card(Queen,Hearts) True,Card(King,Clubs) True,Card(Four,Spades)True]
+ 
+    --return a list of all possible board states after a single move
+    -- findMoves :: Board -> [Board]
+    -- findMoves (EOBoard f c r) = findMovesReserves (EOBoard f c r)
+    -- findAllReservesMoves :: Board -> [Board]
+    -- findAllReservesMoves (EOBoard f _ []) = []
+    -- findAllReservesMoves (EOBoard f c (rCard:res)) = 
+    --     findMovesReserves (EOBoard f c (rCard:res)) ++ findAllReservesMoves (EOBoard f c res)
+
+    -- try to move every reserve card to some column - output every outcome board
+    --fres and fcols store the reserves and columns (so far) at a certain point
+    findMovesReserves :: Reserve -> Columns -> Board -> [Board] 
+    findMovesReserves fres fcols (EOBoard f [] r) = []
+    findMovesReserves fres fcols (EOBoard f (c:cols) (rCard:res))
+        | canMoveToColumn rCard c = [toFoundations (EOBoard f (fcols ++ ((moveToColumn rCard c):cols)) (fres ++ res))] 
+            ++ findMovesReserves (fres ++ [rCard]) [] (EOBoard f (fcols ++ (c:cols)) res)
+        | otherwise = findMovesReserves fres (fcols ++ [c]) (EOBoard f cols (rCard:res))
+-- canMoveToColumn card currentCol = [EOBoard f ((tail c):(moveToColumn card currentCol)) r] ++ 
+
+    -- move every first card from every column to reserve - output every outcome board
+    findMovesColstoRes :: Columns -> Board -> [Board]
+    findMovesColstoRes fcols (EOBoard f [] r) = []
+    findMovesColstoRes fcols (EOBoard f (c:cols) r)
+        | isReserveFull r = []
+        | otherwise =  [toFoundations(EOBoard f (fcols ++ (tail c):cols) (moveToReserve card r))] ++ 
+            findMovesColstoRes (fcols ++ [c]) (EOBoard f cols r)
+        where
+            card = head c
+    
+    --TODO - not compilable yet
+    findMovesColstoCols :: Columns -> Board -> [Board]
+    findMovesColstoCols fcols (EOBoard f [] r) = []
+    findMovesColstoCols fcols (EOBoard f (c:cols) r)
+        | canMoveToColumn card currentCol = [EOBoard f fcols ++ ((tail c):((moveToColumn card currentCol):(tail cols)) r] ++ 
+            findMovesColstoCols (fcols++[c]) (EOBoard f )
+        |
+        where
+         card = head c
+         currentCol = head cols
+         
+    -- does the reserve have max number of cards?
+    isReserveFull :: Reserve -> Bool
+    isReserveFull reserve 
+        | length reserve == 8 = True
+        | otherwise = False
+
+    --move a card to reserve
+    moveToReserve :: SCard -> Reserve -> Reserve
+    moveToReserve card reserve
+        | isReserveFull reserve = reserve
+        | otherwise = reserve ++ [card]
+    
+    --move a card to a column
+    moveToColumn :: SCard -> Deck -> Deck
+    moveToColumn card deck 
+        | canMoveToColumn card deck = [card] ++ deck
+        | otherwise = deck
+
+    --can this card be placed on this column?
+    canMoveToColumn :: SCard -> Deck -> Bool
+    canMoveToColumn (Card c b) []
+        | isKing c = True --king can be placed on empty column
+        | otherwise = False
+    canMoveToColumn card (c:column) 
+        | not (isAce c') && (pCard c' == card') = True
+        | otherwise = False
+        where
+            c' = getCard c
+            card' = getCard card
+
+{-
+NOTES
+- possible moves:
+    - moving card to reserve - DONE
+    - moving card to foundations (to foundations) - DONE
+    - moving card from columns on top of another card in columns 
+    - moving card from reserve on top of another card in columns - DONE
+    - moving King on empty column - DONE
+-}
+
+
+
     ---------- SPIDER SOLITAIRE FUNCTIONS ----------
     sDeal :: Int -> Board
     sDeal n = SBoard [] c s where
@@ -206,7 +295,7 @@ module Solitaire where
             makeFstCrdVis [] = []
             --make first card of each column visible
             makeFstCrdVis (c:crds) =
-                 ((toggleVisibility (head c)) : (drop 1 c)) : (makeFstCrdVis crds)
+                 ((toggleVisibility (head c)) : (tail c)) : (makeFstCrdVis crds)
 
             splitIntoColumns [] = []
             splitIntoColumns d = (splitFirst (take 24 d)) ++ (splitSecond (drop 24 d))
@@ -217,3 +306,15 @@ module Solitaire where
                 -- last 6 columns have 5 cards each
                 splitSecond [] = []
                 splitSecond d = [(take 5 d)] ++ splitSecond (drop 5 d)
+
+    testBoard :: Board 
+    testBoard = EOBoard []
+                    [[Card (Six,Clubs) True,Card(Seven,Diamonds)True,Card(Ace,Hearts) True,Card(Queen,Hearts) True,Card(King,Clubs) True,Card(Four,Spades)True],
+                    [Card(Five,Diamonds)True, Card(Queen,Clubs)True,Card(Three,Diamonds)True,Card(Five,Spades)True,Card(Six,Spades)True,Card(Seven,Hearts)True],
+                    [Card(King,Hearts)True,Card(Ten,Diamonds)True,Card(Seven,Spades)True,Card(Queen,Diamonds)True,Card(Five,Hearts)True,Card(Eight,Diamonds)True],
+                    [Card(Jack,Spades)True,Card(Six,Hearts)True,Card(Seven,Clubs)True,Card(Eight,Spades)True,Card(Ten,Clubs)True,Card(Queen,Clubs)True],
+                    [Card(Ace,Spades)True,Card(Eight,Clubs)True,Card(Ace,Diamonds)True,Card(King,Diamonds)True,Card(Jack,Hearts)True,Card(Four,Clubs)True],
+                    [Card(Two,Diamonds)True,Card(Three,Hearts)True,Card(Two,Hearts)True,Card(Ten,Hearts)True,Card(Six,Diamonds)True,Card(Jack,Clubs)True],
+                    [Card(Nine,Spades)True,Card(Three,Clubs)True,Card(Nine,Clubs)True,Card(Nine,Hearts)True,Card(Three,Spades)True,Card(Ten,Spades)True],
+                    [Card(Two,Clubs)True,Card(Two,Spades)True,Card(Four,Hearts)True,Card(Nine,Diamonds)True,Card(King,Spades)True,Card(Eight,Hearts)True]
+                    ] [Card(Five,Clubs)True,Card(Ace,Clubs)True,Card(Four,Diamonds)True,Card(Jack,Diamonds)True]
