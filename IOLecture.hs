@@ -6,7 +6,6 @@ module IOLecture where
 sayHello :: IO()
 sayHello = putStrLn "Hello World"
 
-
 -- 'do' alows sequences inside IO function
 greeting :: IO()
 greeting = do
@@ -25,5 +24,5 @@ getLine' = do
             xs <- getLine'
             return (x:xs)
 
-inh <- openFile "input.txt" ReadMode
-inpStr <- hGetLine inh
+-- inh <- openFile "input.txt" ReadMode
+-- inpStr <- hGetLine inh
