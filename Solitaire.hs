@@ -298,6 +298,10 @@ NOTES
         | length (findMoves b) == 0 = Nothing
         | otherwise  = Just (testBoard)
 
+    ---------- HELPER FUNCTIONS FOR NEXT MOVE CHOICE ----------
+-- move king from res to empty column
+-- 
+   -- moveKingToEmptyColumn :: Board -> Board
 
     ---------- SPIDER SOLITAIRE FUNCTIONS ----------
     sDeal :: Int -> Board
