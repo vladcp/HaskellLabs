@@ -232,16 +232,22 @@ module Solitaire where
             card = head c
     
     --TODO - not compilable yet
-    findMovesColstoCols :: Columns -> Board -> [Board]
+    findMovesColstoCols :: Columns -> Board -> [Bool]
     findMovesColstoCols fcols (EOBoard f [] r) = []
     findMovesColstoCols fcols (EOBoard f (c:cols) r)
-        | canMoveToColumn card currentCol = [EOBoard f fcols ++ ((tail c):((moveToColumn card currentCol):(tail cols)) r] ++ 
-            findMovesColstoCols (fcols++[c]) (EOBoard f )
-        |
+        | canMoveToAnyColumn card (fcols ++ (c:cols)) = [True] ++ findMovesColstoCols (fcols ++ [c]) (EOBoard f (cols) r)
+            -- [EOBoard f fcols ++ ((tail c):((moveToColumn card currentCol):(tail cols)) r] 
+           -- findMovesColstoCols [] (EOBoard f ())
+        | otherwise = [False] ++ findMovesColstoCols (fcols++[c]) (EOBoard f (cols) r)
         where
          card = head c
-         currentCol = head cols
-         
+         currentCol = head fcols
+
+    -- findMoveOnetoCols :: SCard -> Board -> Columns
+    -- findMoveOnetoCols card (EOBoard f c r) = aux card c 
+    --     where
+    --         aux _ [] = []
+    --         aux card (c:cols) = 
     -- does the reserve have max number of cards?
     isReserveFull :: Reserve -> Bool
     isReserveFull reserve 
@@ -259,6 +265,13 @@ module Solitaire where
     moveToColumn card deck 
         | canMoveToColumn card deck = [card] ++ deck
         | otherwise = deck
+
+    -- can this card be moved to any column?
+    canMoveToAnyColumn :: SCard -> Columns -> Bool
+    canMoveToAnyColumn _ [] = False
+    canMoveToAnyColumn card (c:cols) 
+        | canMoveToColumn card c = True
+        | otherwise = canMoveToAnyColumn card cols
 
     --can this card be placed on this column?
     canMoveToColumn :: SCard -> Deck -> Bool
@@ -318,3 +331,25 @@ NOTES
                     [Card(Nine,Spades)True,Card(Three,Clubs)True,Card(Nine,Clubs)True,Card(Nine,Hearts)True,Card(Three,Spades)True,Card(Ten,Spades)True],
                     [Card(Two,Clubs)True,Card(Two,Spades)True,Card(Four,Hearts)True,Card(Nine,Diamonds)True,Card(King,Spades)True,Card(Eight,Hearts)True]
                     ] [Card(Five,Clubs)True,Card(Ace,Clubs)True,Card(Four,Diamonds)True,Card(Jack,Diamonds)True]
+    testBoard2 :: Board 
+    testBoard2 = EOBoard []
+                    [[Card (Six,Clubs) True,Card(Seven,Diamonds)True,Card(Ace,Hearts) True,Card(Queen,Hearts) True,Card(King,Clubs) True,Card(Four,Spades)True],
+                    [Card(Queen,Diamonds)True, Card(Queen,Clubs)True,Card(Three,Diamonds)True,Card(Five,Spades)True,Card(Six,Spades)True,Card(Seven,Hearts)True],
+                    [Card(King,Hearts)True,Card(Ten,Diamonds)True,Card(Seven,Spades)True,Card(Queen,Diamonds)True,Card(Five,Hearts)True,Card(Eight,Diamonds)True],
+                    [Card(Eight,Clubs)True,Card(Six,Hearts)True,Card(Seven,Clubs)True,Card(Eight,Spades)True,Card(Ten,Clubs)True,Card(Queen,Clubs)True],
+                    [Card(Ace,Spades)True,Card(Eight,Clubs)True,Card(Ace,Diamonds)True,Card(King,Diamonds)True,Card(Jack,Hearts)True,Card(Four,Clubs)True],
+                    [Card(Two,Spades)True,Card(Three,Hearts)True,Card(Two,Hearts)True,Card(Ten,Hearts)True,Card(Six,Diamonds)True,Card(Jack,Clubs)True],
+                    [Card(Ten,Diamonds)True,Card(Three,Clubs)True,Card(Nine,Clubs)True,Card(Nine,Hearts)True,Card(Three,Spades)True,Card(Ten,Spades)True],
+                    [Card(Jack,Diamonds)True,Card(Two,Spades)True,Card(Four,Hearts)True,Card(Nine,Diamonds)True,Card(King,Spades)True,Card(Eight,Hearts)True]
+                    ] [Card(Five,Clubs)True,Card(Ace,Clubs)True,Card(Four,Diamonds)True,Card(Jack,Diamonds)True]
+  
+    testColumns :: Columns
+    testColumns = [[Card (Six,Clubs) True,Card(Seven,Diamonds)True,Card(Ace,Hearts) True,Card(Queen,Hearts) True,Card(King,Clubs) True,Card(Four,Spades)True],
+                    [Card(Five,Diamonds)True, Card(Queen,Clubs)True,Card(Three,Diamonds)True,Card(Five,Spades)True,Card(Six,Spades)True,Card(Seven,Hearts)True],
+                    [Card(King,Hearts)True,Card(Ten,Diamonds)True,Card(Seven,Spades)True,Card(Queen,Diamonds)True,Card(Five,Hearts)True,Card(Eight,Diamonds)True],
+                    [Card(Jack,Spades)True,Card(Six,Hearts)True,Card(Seven,Clubs)True,Card(Eight,Spades)True,Card(Ten,Clubs)True,Card(Queen,Clubs)True],
+                    [Card(Ace,Spades)True,Card(Eight,Clubs)True,Card(Ace,Diamonds)True,Card(King,Diamonds)True,Card(Jack,Hearts)True,Card(Four,Clubs)True],
+                    [Card(Two,Diamonds)True,Card(Three,Hearts)True,Card(Two,Hearts)True,Card(Ten,Hearts)True,Card(Six,Diamonds)True,Card(Jack,Clubs)True],
+                    [Card(Nine,Spades)True,Card(Three,Clubs)True,Card(Nine,Clubs)True,Card(Nine,Hearts)True,Card(Three,Spades)True,Card(Ten,Spades)True],
+                    []
+                    ]
