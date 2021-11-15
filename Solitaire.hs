@@ -19,7 +19,7 @@ module Solitaire where
     type Deck = [SCard] 
 
     --SPIDER SOLITAIRE TODO
-    data SCard = Card Card Bool  
+    data SCard = Card Card Bool deriving Eq
     instance (Show SCard) where
         show (Card c visible) = if visible then show c else "<unknown>"
     
@@ -197,31 +197,28 @@ module Solitaire where
 
 
     ---------- PART 2 FUNCTIONS ---------- 
-    testReserve :: Reserve
-    testReserve = [Card(Three,Clubs)True,Card(Ace,Clubs)True,Card(Five,Clubs)True,Card(Jack,Diamonds)True]
-
-    testColumn :: Deck
-    testColumn = [Card (Six,Clubs) True,Card(Seven,Diamonds)True,Card(Ace,Hearts) True,Card(Queen,Hearts) True,Card(King,Clubs) True,Card(Four,Spades)True]
  
     --return a list of all possible board states after a single move
-    -- findMoves :: Board -> [Board]
-    -- findMoves (EOBoard f c r) = findMovesReserves (EOBoard f c r)
+    findMoves :: Board -> [Board]
+    findMoves b = findMovesReserves [] [] b ++ 
+        findMovesColstoRes [] b ++ findMovesColstoCols [] b
+
     -- findAllReservesMoves :: Board -> [Board]
     -- findAllReservesMoves (EOBoard f _ []) = []
     -- findAllReservesMoves (EOBoard f c (rCard:res)) = 
     --     findMovesReserves (EOBoard f c (rCard:res)) ++ findAllReservesMoves (EOBoard f c res)
 
     -- try to move every reserve card to some column - output every outcome board
-    --fres and fcols store the reserves and columns (so far) at a certain point
+    --fres and fcols store the reserves and columns (so far) at a certain point in the recursion
     findMovesReserves :: Reserve -> Columns -> Board -> [Board] 
     findMovesReserves fres fcols (EOBoard f [] r) = []
     findMovesReserves fres fcols (EOBoard f (c:cols) (rCard:res))
         | canMoveToColumn rCard c = [toFoundations (EOBoard f (fcols ++ ((moveToColumn rCard c):cols)) (fres ++ res))] 
             ++ findMovesReserves (fres ++ [rCard]) [] (EOBoard f (fcols ++ (c:cols)) res)
         | otherwise = findMovesReserves fres (fcols ++ [c]) (EOBoard f cols (rCard:res))
--- canMoveToColumn card currentCol = [EOBoard f ((tail c):(moveToColumn card currentCol)) r] ++ 
 
     -- move every first card from every column to reserve - output every outcome board
+    -- fcols stores columns at a certain point in recursion
     findMovesColstoRes :: Columns -> Board -> [Board]
     findMovesColstoRes fcols (EOBoard f [] r) = []
     findMovesColstoRes fcols (EOBoard f (c:cols) r)
@@ -231,23 +228,20 @@ module Solitaire where
         where
             card = head c
     
-    --TODO - not compilable yet
-    findMovesColstoCols :: Columns -> Board -> [Bool]
+    -- try to move every first card from every column to every other column - output every outcome board 
+    -- fcols contains all columns before current column in recursion
+    findMovesColstoCols :: Columns -> Board -> [Board]
     findMovesColstoCols fcols (EOBoard f [] r) = []
     findMovesColstoCols fcols (EOBoard f (c:cols) r)
-        | canMoveToAnyColumn card (fcols ++ (c:cols)) = [True] ++ findMovesColstoCols (fcols ++ [c]) (EOBoard f (cols) r)
+    -- (fcols ++ cols) - all columns except the one where the current card belongs
+        | canMoveToAnyColumn card (fcols ++ cols) = [toFoundations (EOBoard f (map (moveToColumn card) (fcols ++ (c:cols))) r)] ++
+            findMovesColstoCols (fcols ++ [c]) (EOBoard f cols r)
             -- [EOBoard f fcols ++ ((tail c):((moveToColumn card currentCol):(tail cols)) r] 
-           -- findMovesColstoCols [] (EOBoard f ())
-        | otherwise = [False] ++ findMovesColstoCols (fcols++[c]) (EOBoard f (cols) r)
+        | otherwise = findMovesColstoCols (fcols++[c]) (EOBoard f (cols) r)
         where
          card = head c
          currentCol = head fcols
 
-    -- findMoveOnetoCols :: SCard -> Board -> Columns
-    -- findMoveOnetoCols card (EOBoard f c r) = aux card c 
-    --     where
-    --         aux _ [] = []
-    --         aux card (c:cols) = 
     -- does the reserve have max number of cards?
     isReserveFull :: Reserve -> Bool
     isReserveFull reserve 
@@ -264,6 +258,8 @@ module Solitaire where
     moveToColumn :: SCard -> Deck -> Deck
     moveToColumn card deck 
         | canMoveToColumn card deck = [card] ++ deck
+        -- when moving a card from a column to another, 
+        | card == (head deck) = tail deck 
         | otherwise = deck
 
     -- can this card be moved to any column?
@@ -290,11 +286,17 @@ NOTES
 - possible moves:
     - moving card to reserve - DONE
     - moving card to foundations (to foundations) - DONE
-    - moving card from columns on top of another card in columns 
+    - moving card from columns on top of another card in columns - DONE
     - moving card from reserve on top of another card in columns - DONE
     - moving King on empty column - DONE
 -}
 
+    -- CHOOSE THE NEXT MOVE -- 
+
+    chooseMove :: Board -> Maybe Board
+    chooseMove b 
+        | length (findMoves b) == 0 = Nothing
+        | otherwise  = Just (testBoard)
 
 
     ---------- SPIDER SOLITAIRE FUNCTIONS ----------
@@ -319,6 +321,8 @@ NOTES
                 -- last 6 columns have 5 cards each
                 splitSecond [] = []
                 splitSecond d = [(take 5 d)] ++ splitSecond (drop 5 d)
+    
+    ------------- TESTING BOARDS -------------
 
     testBoard :: Board 
     testBoard = EOBoard []
@@ -331,6 +335,7 @@ NOTES
                     [Card(Nine,Spades)True,Card(Three,Clubs)True,Card(Nine,Clubs)True,Card(Nine,Hearts)True,Card(Three,Spades)True,Card(Ten,Spades)True],
                     [Card(Two,Clubs)True,Card(Two,Spades)True,Card(Four,Hearts)True,Card(Nine,Diamonds)True,Card(King,Spades)True,Card(Eight,Hearts)True]
                     ] [Card(Five,Clubs)True,Card(Ace,Clubs)True,Card(Four,Diamonds)True,Card(Jack,Diamonds)True]
+-- a board meant for testing, it does have repeated cards
     testBoard2 :: Board 
     testBoard2 = EOBoard []
                     [[Card (Six,Clubs) True,Card(Seven,Diamonds)True,Card(Ace,Hearts) True,Card(Queen,Hearts) True,Card(King,Clubs) True,Card(Four,Spades)True],
@@ -353,3 +358,8 @@ NOTES
                     [Card(Nine,Spades)True,Card(Three,Clubs)True,Card(Nine,Clubs)True,Card(Nine,Hearts)True,Card(Three,Spades)True,Card(Ten,Spades)True],
                     []
                     ]
+    testReserve :: Reserve
+    testReserve = [Card(Three,Clubs)True,Card(Ace,Clubs)True,Card(Five,Clubs)True,Card(Jack,Diamonds)True]
+
+    testColumn :: Deck
+    testColumn = [Card (Six,Clubs) True,Card(Seven,Diamonds)True,Card(Ace,Hearts) True,Card(Queen,Hearts) True,Card(King,Clubs) True,Card(Four,Spades)True]
