@@ -67,7 +67,7 @@ module Solitaire where
     type Reserve = [SCard]
 
     -- datatypes - Spider Solitaire
-    data Stock = Stock Deck
+    data Stock = Stock Deck 
     instance (Show Stock) where
         show (Stock d) = (show x) ++ " Deals remaining" 
                     where  x = (length d) `div` 10
@@ -78,7 +78,9 @@ module Solitaire where
     --             --if there are no empty columns
     
     -- board 
-    data Board = EOBoard Foundations Columns Reserve | SBoard Foundations Columns Stock
+    data Board = EOBoard Foundations Columns Reserve | SBoard Foundations Columns Stock 
+    instance Eq  (Board) where
+        (EOBoard f1 c1 r1) == (EOBoard f2 c2 r2) = f1 == f2 && c1 == c2 && r1 == r2
     -- --declaring custom instance of Show
     instance (Show Board) where 
         show b = boardShow b
@@ -293,15 +295,17 @@ NOTES
 
     -- CHOOSE THE NEXT MOVE -- 
 
-    chooseMove :: Board -> Maybe Board
+    chooseMove :: Board -> Board
     chooseMove b 
-        | length (findMoves b) == 0 = Nothing
-        | otherwise  = Just ((findMoves b) !! 0)
+        | length (findMoves b) == 0 = EOBoard [] [] []
+        | otherwise  = (findMoves b) !! 0
 
-    solve :: Board -> Maybe Board
-    solve b 
-      | chooseMove b == Nothing = Just (b)
-      | otherwise = solve (chooseMove b)
+    solve :: Board -> [Board]
+    solve (EOBoard [] [] []) = []
+    solve (b) 
+      | move == EOBoard [] [] [] = []
+      | otherwise = [move] ++ solve(move)
+       where move = chooseMove b
     ---------- HELPER FUNCTIONS FOR NEXT MOVE CHOICE ----------
 -- move king from res to empty column
 -- 
