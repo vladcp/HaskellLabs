@@ -104,15 +104,15 @@ module Solitaire where
     -- --initial layout from the assignment brief
     initialLayout :: Board 
     initialLayout = EOBoard []
-                    [[Card (Six,Clubs) True,Card(Seven,Diamonds)True,Card(Ace,Hearts) True,Card(Queen,Hearts) True,Card(King,Clubs) True,Card(Four,Spades)True],
+                    [[Card (Ace,Clubs) True,Card(Seven,Diamonds)True,Card(Ace,Hearts) True,Card(Queen,Hearts) True,Card(King,Clubs) True,Card(Four,Spades)True],
                     [Card(Five,Diamonds)True, Card(Queen,Clubs)True,Card(Three,Diamonds)True,Card(Five,Spades)True,Card(Six,Spades)True,Card(Seven,Hearts)True],
                     [Card(King,Hearts)True,Card(Ten,Diamonds)True,Card(Seven,Spades)True,Card(Queen,Diamonds)True,Card(Five,Hearts)True,Card(Eight,Diamonds)True],
                     [Card(Jack,Spades)True,Card(Six,Hearts)True,Card(Seven,Clubs)True,Card(Eight,Spades)True,Card(Ten,Clubs)True,Card(Queen,Clubs)True],
                     [Card(Ace,Spades)True,Card(Eight,Clubs)True,Card(Ace,Diamonds)True,Card(King,Diamonds)True,Card(Jack,Hearts)True,Card(Four,Clubs)True],
-                    [Card(Two,Diamonds)True,Card(Three,Hearts)True,Card(Two,Hearts)True,Card(Ten,Hearts)True,Card(Six,Diamonds)True,Card(Jack,Clubs)True],
+                    [Card(Two,Diamonds)True,Card(Three,Hearts)True,Card(Three,Clubs)True,Card(Ten,Hearts)True,Card(Six,Diamonds)True,Card(Jack,Clubs)True],
                     [Card(Nine,Spades)True,Card(Four,Diamonds)True,Card(Nine,Clubs)True,Card(Nine,Hearts)True,Card(Three,Spades)True,Card(Ten,Spades)True],
                     [Card(Two,Clubs)True,Card(Two,Spades)True,Card(Four,Hearts)True,Card(Nine,Diamonds)True,Card(King,Spades)True,Card(Eight,Hearts)True]
-                    ] [Card(Three,Clubs)True,Card(Ace,Clubs)True,Card(Five,Clubs)True,Card(Jack,Diamonds)True]
+                    ] [Card(Two,Hearts)True,Card(Six,Clubs)True,Card(Five,Clubs)True,Card(Jack,Diamonds)True]
 
     -- initialSBoard :: Board 
     -- initialSBoard = SBoard [Card (King, Hearts) True]
@@ -296,8 +296,12 @@ NOTES
     chooseMove :: Board -> Maybe Board
     chooseMove b 
         | length (findMoves b) == 0 = Nothing
-        | otherwise  = Just (testBoard)
+        | otherwise  = Just ((findMoves b) !! 0)
 
+    solve :: Board -> Maybe Board
+    solve b 
+      | chooseMove b == Nothing = Just (b)
+      | otherwise = solve (chooseMove b)
     ---------- HELPER FUNCTIONS FOR NEXT MOVE CHOICE ----------
 -- move king from res to empty column
 -- 
