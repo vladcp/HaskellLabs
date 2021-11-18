@@ -143,12 +143,6 @@ module Solitaire where
              splitIntoColumns [] = []
              splitIntoColumns deck = 
                  [(take 6 deck)] ++ splitIntoColumns (drop 6 deck)
-    
-    toFoundations :: Board -> Board 
-    toFoundations (EOBoard f c r) = toFoundationsColumns [] (EOBoard f' c r') 
-        where
-            --start with trying to put the reserve to foundations
-            (r',f') = toFoundationsReserve [] r f
 
     --retry to place reserves to foundations every time we place a card from columns to foundations
     toFoundationsColumns :: Columns -> Board -> Board
@@ -160,8 +154,8 @@ module Solitaire where
          where
              top = head c
              (r',f') = toFoundationsReserve [] r (placeOnFoundation top f) 
+              -- f' -> foundation after we placed all possible reserves
 
-            -- f' -> foundation after we placed all possible reserves
     toFoundationsReserve :: Reserve -> Reserve -> Foundations -> (Reserve,Foundations)
     toFoundationsReserve [] [] f = ([], f)
     toFoundationsReserve aux [] f = (aux, f)
@@ -197,18 +191,22 @@ module Solitaire where
                             c = getCard card
                             c' = getCard card'
 
+    toFoundations :: Board -> Board 
+    toFoundations (EOBoard f c r) = toFoundationsColumns [] (EOBoard f' c r') 
+        where
+            --start with trying to put the reserve to foundations
+            (r',f') = toFoundationsReserve [] r f
 
     ---------- PART 2 FUNCTIONS ---------- 
- 
-    --return a list of all possible board states after a single move
-    findMoves :: Board -> [Board]
-    findMoves b = findMovesReserves [] [] b ++ 
-        findMovesColstoRes [] b ++ findMovesColstoCols [] b
+    --getter functions that might come in handy
+    getReserve :: Board -> Reserve
+    getReserve (EOBoard f c r) = r
 
-    -- findAllReservesMoves :: Board -> [Board]
-    -- findAllReservesMoves (EOBoard f _ []) = []
-    -- findAllReservesMoves (EOBoard f c (rCard:res)) = 
-    --     findMovesReserves (EOBoard f c (rCard:res)) ++ findAllReservesMoves (EOBoard f c res)
+    getColumns :: Board -> Columns
+    getColumns (EOBoard f c r) = c
+
+    getFoundations :: Board -> Foundations
+    getFoundations (EOBoard f c r) = f
 
     -- try to move every reserve card to some column - output every outcome board
     --fres and fcols store the reserves and columns (so far) at a certain point in the recursion
@@ -230,6 +228,7 @@ module Solitaire where
         where
             card = head c
     
+    -- NOTE TODO: if card under head card is movable to foundations -> then that's the best move
     -- try to move every first card from every column to every other column - output every outcome board 
     -- fcols contains all columns before current column in recursion
     findMovesColstoCols :: Columns -> Board -> [Board]
@@ -282,7 +281,14 @@ module Solitaire where
         where
             c' = getCard c
             card' = getCard card
-
+    
+    -- can the nth card in a column can be moved to foundations?
+    isNthCardMoveable :: Columns -> Foundations -> Int -> Bool
+    isNthCardMoveable [] _ _ = False
+    isNthCardMoveable (headcol:restcols) found nth 
+      | length headcol <= (nth-1) = isNthCardMoveable (filter (not.null) restcols) found nth
+      | canBePlaced (headcol !! (nth-1)) found = True
+      | otherwise = isNthCardMoveable (filter (not.null) restcols) found nth
 {-
 NOTES
 - possible moves:
@@ -294,11 +300,18 @@ NOTES
 -}
 
     -- CHOOSE THE NEXT MOVE -- 
+    --return a list of all possible board states after a single move
+    findMoves :: Board -> [Board]
+    findMoves b = findMovesColstoCols [] b ++ findMovesReserves [] [] b ++ 
+        findMovesColstoRes [] b 
+  
+   -- findBestMoves :: Board -> [Board]
+-- there is atleast once space in reserve, and the 2nd card in a column can be moved to foundation, then move first card in column to reserve
 
     chooseMove :: Board -> Board
     chooseMove b 
         | length (findMoves b) == 0 = EOBoard [] [] []
-        | otherwise  = (findMoves b) !! 0
+        | otherwise  = head (findMoves b)
 
     solve :: Board -> [Board]
     solve (EOBoard [] [] []) = []
