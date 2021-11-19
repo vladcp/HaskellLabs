@@ -12,14 +12,17 @@ module Solitaire where
     import Debug.Trace
     -- datatypes - basics
     data Suit = Hearts | Clubs | Spades | Diamonds deriving (Show, Eq, Enum)
+
     data Pip = Ace | Two | Three | Four | Five | Six | Seven
               | Eight | Nine | Ten | Jack | Queen
-              | King deriving (Show,Eq, Enum)
+              | King deriving (Show, Eq, Enum)
     type Card = (Pip, Suit) 
     type Deck = [SCard] 
 
-    --SPIDER SOLITAIRE TODO
-    data SCard = Card Card Bool deriving Eq
+    --SPIDER SOLITAIRE
+    data SCard = Card Card Bool 
+    instance (Eq SCard) where
+        (Card card1 b1) == (Card card2 b2) = card1 == card2
     instance (Show SCard) where
         show (Card c visible) = if visible then show c else "<unknown>"
     
@@ -34,33 +37,32 @@ module Solitaire where
     -- we can choose to have cards facing up or facing down
     -- True -> all cards are visible
     pack :: Bool -> Deck 
-    pack visible = [Card (pip, suit) visible | suit <- [Hearts .. Diamonds], pip <- [Two .. Ace]]
+    pack visible = [Card (pip, suit) visible | suit <- [Hearts .. Diamonds], pip <- [Ace .. King]]
 
     -- sCard returns successor card
-    sCard :: Card -> Card
-    sCard (p, s) 
-        | p == King = (Ace, s) --if Ace - go back to two
-        | otherwise = (succ p, s)
-
+    sCard :: SCard -> SCard
+    sCard (Card (p, s) b)
+        | p == King = Card (Ace, s) b--if King, go to Ace
+        | otherwise = Card (succ p, s) b
+        
     --pCard returns predecessor card
-    pCard :: Card -> Card
-    pCard (p,s) 
-        | p == Ace = (King, s)
-        | otherwise = (pred p, s)
+    pCard :: SCard -> SCard
+    pCard (Card (p,s) b)
+        | p == Ace = Card (King, s) b
+        | otherwise = Card (pred p, s) b
 
     --check if a card is an Ace
-    isAce :: Card -> Bool
-    isAce (p,s) = p == Ace
+    isAce :: SCard -> Bool
+    isAce (Card (p,s) b) = p == Ace
 
     --check if a card is an Ace
-    isKing :: Card -> Bool
-    isKing (p,s) = p == King
+    isKing :: SCard -> Bool
+    isKing (Card (p,s) b) = p == King
 
     -- shuffle a deck of cards
     cmp (x1,y1) (x2,y2) = compare y1 y2
     shuffle :: Int -> Deck -> Deck
     shuffle n d = [c | (c,m) <- sortBy cmp (zip d (randoms (mkStdGen n) :: [Int]))]
-
     -- datatypes - eight-off board  
     type Foundations = [SCard] 
     type Columns = [Deck]
@@ -144,58 +146,48 @@ module Solitaire where
              splitIntoColumns deck = 
                  [(take 6 deck)] ++ splitIntoColumns (drop 6 deck)
 
-    --retry to place reserves to foundations every time we place a card from columns to foundations
-    toFoundationsColumns :: Columns -> Board -> Board
-    toFoundationsColumns aux (EOBoard f [] r) = EOBoard f aux r
-    toFoundationsColumns aux (EOBoard f (c:cols) r) 
-        -- if a column card can be placed, 
-         | canBePlaced top f = toFoundationsColumns [] (EOBoard f' (aux ++ ((tail c):cols)) r') 
-         | otherwise = toFoundationsColumns (aux ++ [c]) (EOBoard f cols r)
-         where
-             top = head c
-             (r',f') = toFoundationsReserve [] r (placeOnFoundation top f) 
-              -- f' -> foundation after we placed all possible reserves
-
-    toFoundationsReserve :: Reserve -> Reserve -> Foundations -> (Reserve,Foundations)
-    toFoundationsReserve [] [] f = ([], f)
-    toFoundationsReserve aux [] f = (aux, f)
-    toFoundationsReserve aux (r:rs) f 
-                |  canBePlaced r f = toFoundationsReserve [] (aux++rs) (placeOnFoundation r f)
-                |  otherwise = toFoundationsReserve (aux ++ [r]) rs f
-
-    --can a card be placed into the foundations?
-    canBePlaced :: SCard -> Foundations -> Bool
-    canBePlaced card [] 
-                | isAce c = True
-                | otherwise = False
-                where c = getCard card
-    canBePlaced card (card':fnd)
-                | isAce c = True
-                | c == sCard c' = True
-                | otherwise = canBePlaced card fnd
-                where 
-                    c = getCard card
-                    c' = getCard card'
+     --can a card be placed into the foundations?
+    canBeMovedToFoundation :: SCard -> Foundations -> Bool
+    canBeMovedToFoundation card f 
+        | isAce card = True
+        | not (null (filter (\x -> (x == pCard card)) f)) = True
+        | otherwise = False
 
     -- place a card to the foundations, return the foundations
     placeOnFoundation :: SCard -> Foundations -> Foundations
-    placeOnFoundation card []
-                        | isAce c = [card]
-                        | otherwise = []
-                        where c = getCard card
-    placeOnFoundation card f@(card':fnd) 
-                        | isAce c = card:f
-                        | c == sCard c' = card:fnd
-                        | otherwise = card':(placeOnFoundation card fnd)
-                        where 
-                            c = getCard card
-                            c' = getCard card'
+    placeOnFoundation card f 
+        | isAce card = f ++ [card]
+        | otherwise = map (\f -> if (not (isKing f) && ((sCard f) == card)) then (sCard f) else f) f
+        
+    toFoundationsColumns' :: Board -> Board
+    toFoundationsColumns' b@(EOBoard _ [] _) = b
+    toFoundationsColumns' b@(EOBoard f c r)
+        | not (null movableCards) = (EOBoard (foldr (\x f -> placeOnFoundation x f) f movableCards) 
+           ((map removeHeads c)) r)
+        | otherwise = b
+         where 
+             colHeads = map head (filter (not.null) c)
+             movableCards = (filter (\x -> canBeMovedToFoundation x f) colHeads)
+             removeHeads [] = []
+             removeHeads col@(c:cs) = if (elem c movableCards) then cs else col
 
-    toFoundations :: Board -> Board 
-    toFoundations (EOBoard f c r) = toFoundationsColumns [] (EOBoard f' c r') 
+    -- move all cards from reserve to foundations (that can be moved) in one go
+    toFoundationsReserve' :: Board -> Board
+    toFoundationsReserve' b@(EOBoard _ _ []) = b
+    toFoundationsReserve' b@(EOBoard f c reserve) 
+        | not (null movableCards) = (EOBoard (foldr (\x f -> placeOnFoundation x f) f movableCards) c (filter (\x -> not (elem x movableCards)) reserve))
+        | otherwise = b
         where
-            --start with trying to put the reserve to foundations
-            (r',f') = toFoundationsReserve [] r f
+            movableCards = (filter (\x -> canBeMovedToFoundation x f) reserve)
+
+    toFoundations :: Board -> Board
+    toFoundations board 
+        | board /= toFRes = toFoundations toFRes
+        | board /= toFCol = toFoundations toFCol
+        | otherwise = board
+         where 
+             toFRes = toFoundationsReserve' board
+             toFCol = toFoundationsColumns' board 
 
     ---------- PART 2 FUNCTIONS ---------- 
     --getter functions that might come in handy
@@ -223,7 +215,7 @@ module Solitaire where
     findMovesColstoRes fcols (EOBoard f [] r) = []
     findMovesColstoRes fcols (EOBoard f (c:cols) r)
         | isReserveFull r = []
-        | otherwise =  [toFoundations(EOBoard f (fcols ++ (tail c):cols) (moveToReserve card r))] ++ 
+        | otherwise =  [toFoundations(EOBoard f (fcols ++ (tail c):cols) (addToReserve card r))] ++ 
             findMovesColstoRes (fcols ++ [c]) (EOBoard f cols r)
         where
             card = head c
@@ -249,9 +241,9 @@ module Solitaire where
         | length reserve == 8 = True
         | otherwise = False
 
-    --move a card to reserve
-    moveToReserve :: SCard -> Reserve -> Reserve
-    moveToReserve card reserve
+    --add a card to reserve
+    addToReserve :: SCard -> Reserve -> Reserve
+    addToReserve card reserve
         | isReserveFull reserve = reserve
         | otherwise = reserve ++ [card]
     
@@ -272,33 +264,24 @@ module Solitaire where
 
     --can this card be placed on this column?
     canMoveToColumn :: SCard -> Deck -> Bool
-    canMoveToColumn (Card c b) []
-        | isKing c = True --king can be placed on empty column
+    canMoveToColumn card []
+        | isKing card = True --king can be placed on empty column
         | otherwise = False
     canMoveToColumn card (c:column) 
-        | not (isAce c') && (pCard c' == card') = True
+        | not (isAce c) && (pCard c == card) = True
         | otherwise = False
-        where
-            c' = getCard c
-            card' = getCard card
     
-    -- can the nth card in a column can be moved to foundations?
+    -- can the nth card in a column be moved to foundations?
     isNthCardMoveable :: Columns -> Foundations -> Int -> Bool
     isNthCardMoveable [] _ _ = False
     isNthCardMoveable (headcol:restcols) found nth 
       | length headcol <= (nth-1) = isNthCardMoveable (filter (not.null) restcols) found nth
-      | canBePlaced (headcol !! (nth-1)) found = True
+      | canBeMovedToFoundation (headcol !! (nth-1)) found = True
       | otherwise = isNthCardMoveable (filter (not.null) restcols) found nth
 {-
 NOTES
-- possible moves:
-    - moving card to reserve - DONE
-    - moving card to foundations (to foundations) - DONE
-    - moving card from columns on top of another card in columns - DONE
-    - moving card from reserve on top of another card in columns - DONE
-    - moving King on empty column - DONE
--}
 
+-}
     -- CHOOSE THE NEXT MOVE -- 
     --return a list of all possible board states after a single move
     findMoves :: Board -> [Board]
@@ -370,8 +353,9 @@ NOTES
                     [Card(Ace,Spades)True,Card(Eight,Clubs)True,Card(Ace,Diamonds)True,Card(King,Diamonds)True,Card(Jack,Hearts)True,Card(Four,Clubs)True],
                     [Card(Two,Spades)True,Card(Three,Hearts)True,Card(Two,Hearts)True,Card(Ten,Hearts)True,Card(Six,Diamonds)True,Card(Jack,Clubs)True],
                     [Card(Ten,Diamonds)True,Card(Three,Clubs)True,Card(Nine,Clubs)True,Card(Nine,Hearts)True,Card(Three,Spades)True,Card(Ten,Spades)True],
+                    [],
                     [Card(Jack,Diamonds)True,Card(Two,Spades)True,Card(Four,Hearts)True,Card(Nine,Diamonds)True,Card(King,Spades)True,Card(Eight,Hearts)True]
-                    ] [Card(Five,Clubs)True,Card(Ace,Clubs)True,Card(Four,Diamonds)True,Card(Jack,Diamonds)True]
+                    ] [Card(Five,Clubs)True,Card(Ace,Clubs)True,Card(Four,Diamonds)True,Card(Jack,Diamonds)True, Card (Ace,Spades) True]
   
     testColumns :: Columns
     testColumns = [[Card (Six,Clubs) True,Card(Seven,Diamonds)True,Card(Ace,Hearts) True,Card(Queen,Hearts) True,Card(King,Clubs) True,Card(Four,Spades)True],
