@@ -159,9 +159,9 @@ module Solitaire where
         | isAce card = f ++ [card]
         | otherwise = map (\f -> if (not (isKing f) && ((sCard f) == card)) then (sCard f) else f) f
         
-    toFoundationsColumns' :: Board -> Board
-    toFoundationsColumns' b@(EOBoard _ [] _) = b
-    toFoundationsColumns' b@(EOBoard f c r)
+    toFoundationsColumns :: Board -> Board
+    toFoundationsColumns b@(EOBoard _ [] _) = b
+    toFoundationsColumns b@(EOBoard f c r)
         | not (null movableCards) = (EOBoard (foldr (\x f -> placeOnFoundation x f) f movableCards) 
            ((map removeHeads c)) r)
         | otherwise = b
@@ -172,9 +172,9 @@ module Solitaire where
              removeHeads col@(c:cs) = if (elem c movableCards) then cs else col
 
     -- move all cards from reserve to foundations (that can be moved) in one go
-    toFoundationsReserve' :: Board -> Board
-    toFoundationsReserve' b@(EOBoard _ _ []) = b
-    toFoundationsReserve' b@(EOBoard f c reserve) 
+    toFoundationsReserve :: Board -> Board
+    toFoundationsReserve b@(EOBoard _ _ []) = b
+    toFoundationsReserve b@(EOBoard f c reserve) 
         | not (null movableCards) = (EOBoard (foldr (\x f -> placeOnFoundation x f) f movableCards) c (filter (\x -> not (elem x movableCards)) reserve))
         | otherwise = b
         where
@@ -186,8 +186,8 @@ module Solitaire where
         | board /= toFCol = toFoundations toFCol
         | otherwise = board
          where 
-             toFRes = toFoundationsReserve' board
-             toFCol = toFoundationsColumns' board 
+             toFRes = toFoundationsReserve board
+             toFCol = toFoundationsColumns board 
 
     ---------- PART 2 FUNCTIONS ---------- 
     --getter functions that might come in handy
@@ -215,7 +215,7 @@ module Solitaire where
     findMovesColstoRes fcols (EOBoard f [] r) = []
     findMovesColstoRes fcols (EOBoard f (c:cols) r)
         | isReserveFull r = []
-        | otherwise =  [toFoundations(EOBoard f (fcols ++ (tail c):cols) (addToReserve card r))] ++ 
+        | otherwise =  [toFoundations(EOBoard f (fcols ++ (tail c):cols) (moveToReserve card r))] ++ 
             findMovesColstoRes (fcols ++ [c]) (EOBoard f cols r)
         where
             card = head c
@@ -241,18 +241,18 @@ module Solitaire where
         | length reserve == 8 = True
         | otherwise = False
 
-    --add a card to reserve
-    addToReserve :: SCard -> Reserve -> Reserve
-    addToReserve card reserve
+    --move a card to reserve
+    moveToReserve :: SCard -> Reserve -> Reserve
+    moveToReserve card reserve
         | isReserveFull reserve = reserve
         | otherwise = reserve ++ [card]
     
     --move a card to a column
     moveToColumn :: SCard -> Deck -> Deck
+    moveToColumn card [] = [card]
     moveToColumn card deck 
         | canMoveToColumn card deck = [card] ++ deck
-        -- when moving a card from a column to another, 
-        | card == (head deck) = tail deck 
+        | card == (head deck) = tail deck --if it's the head card, delete it
         | otherwise = deck
 
     -- can this card be moved to any column?
@@ -265,7 +265,7 @@ module Solitaire where
     --can this card be placed on this column?
     canMoveToColumn :: SCard -> Deck -> Bool
     canMoveToColumn card []
-        | isKing card = True --king can be placed on empty column
+        | isKing card = True --only a king can be placed on empty column
         | otherwise = False
     canMoveToColumn card (c:column) 
         | not (isAce c) && (pCard c == card) = True
@@ -278,6 +278,17 @@ module Solitaire where
       | length headcol <= (nth-1) = isNthCardMoveable (filter (not.null) restcols) found nth
       | canBeMovedToFoundation (headcol !! (nth-1)) found = True
       | otherwise = isNthCardMoveable (filter (not.null) restcols) found nth
+
+-- ===================================== --
+    getEmptyCol :: Columns -> Maybe Int
+    getEmptyCol cols = elemIndex [] cols
+    
+    --return the index of the first empty column, if there is one, otherwise return -1
+    getEmptyColIndex :: Columns -> Int
+    getEmptyColIndex cols = if (getEmptyCol cols) == Nothing then -1 else (\(Just i) -> i) (getEmptyCol cols)
+-- ===================================== --
+    -- move king to empty col, but move the best king. try to move one from reserves first, to free up space
+
 {-
 NOTES
 
@@ -299,7 +310,7 @@ NOTES
     solve :: Board -> [Board]
     solve (EOBoard [] [] []) = []
     solve (b) 
-      | move == EOBoard [] [] [] = []
+      | move == (EOBoard [] [] []) = []
       | otherwise = [move] ++ solve(move)
        where move = chooseMove b
     ---------- HELPER FUNCTIONS FOR NEXT MOVE CHOICE ----------
@@ -355,7 +366,7 @@ NOTES
                     [Card(Ten,Diamonds)True,Card(Three,Clubs)True,Card(Nine,Clubs)True,Card(Nine,Hearts)True,Card(Three,Spades)True,Card(Ten,Spades)True],
                     [],
                     [Card(Jack,Diamonds)True,Card(Two,Spades)True,Card(Four,Hearts)True,Card(Nine,Diamonds)True,Card(King,Spades)True,Card(Eight,Hearts)True]
-                    ] [Card(Five,Clubs)True,Card(Ace,Clubs)True,Card(Four,Diamonds)True,Card(Jack,Diamonds)True, Card (Ace,Spades) True]
+                    ] [Card(Five,Clubs)True,Card(Ace,Clubs)True,Card(Four,Diamonds)True,Card(Jack,Diamonds)True, Card (King,Spades) True]
   
     testColumns :: Columns
     testColumns = [[Card (Six,Clubs) True,Card(Seven,Diamonds)True,Card(Ace,Hearts) True,Card(Queen,Hearts) True,Card(King,Clubs) True,Card(Four,Spades)True],
@@ -364,8 +375,7 @@ NOTES
                     [Card(Jack,Spades)True,Card(Six,Hearts)True,Card(Seven,Clubs)True,Card(Eight,Spades)True,Card(Ten,Clubs)True,Card(Queen,Clubs)True],
                     [Card(Ace,Spades)True,Card(Eight,Clubs)True,Card(Ace,Diamonds)True,Card(King,Diamonds)True,Card(Jack,Hearts)True,Card(Four,Clubs)True],
                     [Card(Two,Diamonds)True,Card(Three,Hearts)True,Card(Two,Hearts)True,Card(Ten,Hearts)True,Card(Six,Diamonds)True,Card(Jack,Clubs)True],
-                    [Card(Nine,Spades)True,Card(Three,Clubs)True,Card(Nine,Clubs)True,Card(Nine,Hearts)True,Card(Three,Spades)True,Card(Ten,Spades)True],
-                    []
+                    [Card(Nine,Spades)True,Card(Three,Clubs)True,Card(Nine,Clubs)True,Card(Nine,Hearts)True,Card(Three,Spades)True,Card(Ten,Spades)True]
                     ]
     testReserve :: Reserve
     testReserve = [Card(Three,Clubs)True,Card(Ace,Clubs)True,Card(Five,Clubs)True,Card(Jack,Diamonds)True]
