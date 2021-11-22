@@ -150,7 +150,7 @@ module Solitaire where
     canBeMovedToFoundation :: SCard -> Foundations -> Bool
     canBeMovedToFoundation card f 
         | isAce card = True
-        | not (null (filter (\x -> (x == pCard card)) f)) = True
+        | not (null (filter (\x -> x == pCard card) f)) = True
         | otherwise = False
 
     -- place a card to the foundations, return the foundations
@@ -163,7 +163,7 @@ module Solitaire where
     toFoundationsColumns b@(EOBoard _ [] _) = b
     toFoundationsColumns b@(EOBoard f c r)
         | not (null movableCards) = (EOBoard (foldr (\x f -> placeOnFoundation x f) f movableCards) 
-           ((map removeHeads c)) r)
+           (filter (not.null) (map removeHeads c)) r)
         | otherwise = b
          where 
              colHeads = map head (filter (not.null) c)
@@ -235,12 +235,26 @@ module Solitaire where
          card = head c
          currentCol = head fcols
 
+    --given a card in the reserve, remove it from reserve
+    removeFromRes :: SCard -> Board -> Board
+    removeFromRes card (EOBoard f c r) = EOBoard f c (delete card r)
+
+    -- given a card, it will remove it from the columns
+    -- this will mainly be used to remove a card from column heads
+    removeFromCol :: SCard -> Board -> Board
+    removeFromCol card (EOBoard f cols r) = (EOBoard f newCols r)
+        where
+            newCols = [filter (/= card) c | c <- cols] --(smart) filter
+
     -- does the reserve have max number of cards?
     isReserveFull :: Reserve -> Bool
     isReserveFull reserve 
         | length reserve == 8 = True
         | otherwise = False
 
+    --is there any empty column on the board
+    isAnyEmptyCol :: Board -> Bool
+    isAnyEmptyCol (EOBoard f c r) = (length c) < 8
     --move a card to reserve
     moveToReserve :: SCard -> Reserve -> Reserve
     moveToReserve card reserve
@@ -279,15 +293,38 @@ module Solitaire where
       | canBeMovedToFoundation (headcol !! (nth-1)) found = True
       | otherwise = isNthCardMoveable (filter (not.null) restcols) found nth
 
--- ===================================== --
-    getEmptyCol :: Columns -> Maybe Int
-    getEmptyCol cols = elemIndex [] cols
+    --return first King in res, return random card and False otherwise
+    getKingRes :: Reserve -> (SCard,Bool) 
+    getKingRes [] = (Card (Three,Spades) False ,False) -- if no king, return a useless face down card
+    getKingRes (r:res) 
+        | isKing r = (r,True)
+        | otherwise = getKingRes res
     
-    --return the index of the first empty column, if there is one, otherwise return -1
-    getEmptyColIndex :: Columns -> Int
-    getEmptyColIndex cols = if (getEmptyCol cols) == Nothing then -1 else (\(Just i) -> i) (getEmptyCol cols)
+    getKingColHead :: Columns -> (SCard, Bool)
+    getKingColHead [] = (Card (Three,Spades) False ,False) -- if no king, return a useless face down card
+    getKingColHead (c:cols)
+        | isKing (head c) = (head c, True)
+        | otherwise = getKingColHead cols
+-- ===================================== --
+
 -- ===================================== --
     -- move king to empty col, but move the best king. try to move one from reserves first, to free up space
+    moveKingResToEmptyCol :: Board -> Board
+    moveKingResToEmptyCol board@(EOBoard f cols res) =
+        (EOBoard f (cols ++ [[king]]) (getReserve (removeFromRes king board)))
+        where king = fst (getKingRes res)
+        -- | getEmptyCol cols == Nothing = board
+        -- | snd (getKingRes res) == False = board
+
+    -- move king from head of a col to empty column
+    -- note: if card under this king can be moved to foundations, then choose this king (?)
+    moveKingColToEmptyCol :: Board -> Board
+    moveKingColToEmptyCol board@(EOBoard f cols r) =
+        (EOBoard f newCols r)
+        where 
+            king = fst (getKingColHead cols)
+            newCols = (getColumns (removeFromCol king board)) ++ [[king]]
+
 
 {-
 NOTES
@@ -364,21 +401,20 @@ NOTES
                     [Card(Ace,Spades)True,Card(Eight,Clubs)True,Card(Ace,Diamonds)True,Card(King,Diamonds)True,Card(Jack,Hearts)True,Card(Four,Clubs)True],
                     [Card(Two,Spades)True,Card(Three,Hearts)True,Card(Two,Hearts)True,Card(Ten,Hearts)True,Card(Six,Diamonds)True,Card(Jack,Clubs)True],
                     [Card(Ten,Diamonds)True,Card(Three,Clubs)True,Card(Nine,Clubs)True,Card(Nine,Hearts)True,Card(Three,Spades)True,Card(Ten,Spades)True],
-                    [],
                     [Card(Jack,Diamonds)True,Card(Two,Spades)True,Card(Four,Hearts)True,Card(Nine,Diamonds)True,Card(King,Spades)True,Card(Eight,Hearts)True]
                     ] [Card(Five,Clubs)True,Card(Ace,Clubs)True,Card(Four,Diamonds)True,Card(Jack,Diamonds)True, Card (King,Spades) True]
   
     testColumns :: Columns
     testColumns = [[Card (Six,Clubs) True,Card(Seven,Diamonds)True,Card(Ace,Hearts) True,Card(Queen,Hearts) True,Card(King,Clubs) True,Card(Four,Spades)True],
-                    [Card(Five,Diamonds)True, Card(Queen,Clubs)True,Card(Three,Diamonds)True,Card(Five,Spades)True,Card(Six,Spades)True,Card(Seven,Hearts)True],
-                    [Card(King,Hearts)True,Card(Ten,Diamonds)True,Card(Seven,Spades)True,Card(Queen,Diamonds)True,Card(Five,Hearts)True,Card(Eight,Diamonds)True],
+                    [Card(King,Diamonds)True, Card(Queen,Clubs)True,Card(Three,Diamonds)True,Card(Five,Spades)True,Card(Six,Spades)True,Card(Seven,Hearts)True],
+                    [Card(Three,Hearts)True,Card(Ten,Diamonds)True,Card(Seven,Spades)True,Card(Queen,Diamonds)True,Card(Five,Hearts)True,Card(Eight,Diamonds)True],
                     [Card(Jack,Spades)True,Card(Six,Hearts)True,Card(Seven,Clubs)True,Card(Eight,Spades)True,Card(Ten,Clubs)True,Card(Queen,Clubs)True],
                     [Card(Ace,Spades)True,Card(Eight,Clubs)True,Card(Ace,Diamonds)True,Card(King,Diamonds)True,Card(Jack,Hearts)True,Card(Four,Clubs)True],
                     [Card(Two,Diamonds)True,Card(Three,Hearts)True,Card(Two,Hearts)True,Card(Ten,Hearts)True,Card(Six,Diamonds)True,Card(Jack,Clubs)True],
                     [Card(Nine,Spades)True,Card(Three,Clubs)True,Card(Nine,Clubs)True,Card(Nine,Hearts)True,Card(Three,Spades)True,Card(Ten,Spades)True]
                     ]
     testReserve :: Reserve
-    testReserve = [Card(Three,Clubs)True,Card(Ace,Clubs)True,Card(Five,Clubs)True,Card(Jack,Diamonds)True]
+    testReserve = [Card(King,Clubs)True,Card(Ace,Clubs)True,Card(Five,Clubs)True,Card(Jack,Diamonds)True]
 
     testColumn :: Deck
     testColumn = [Card (Six,Clubs) True,Card(Seven,Diamonds)True,Card(Ace,Hearts) True,Card(Queen,Hearts) True,Card(King,Clubs) True,Card(Four,Spades)True]
