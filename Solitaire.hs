@@ -235,6 +235,15 @@ module Solitaire where
          card = head c
          currentCol = head fcols
 
+    -- ===================================== --
+---------- HELPER FUNCTIONS FOR NEXT MOVE CHOICE ----------
+
+     -- does the reserve have max number of cards?
+    isReserveFull :: Reserve -> Bool
+    isReserveFull reserve 
+        | length reserve == 8 = True
+        | otherwise = False
+
     --given a card in the reserve, remove it from reserve
     removeFromRes :: SCard -> Board -> Board
     removeFromRes card (EOBoard f c r) = EOBoard f c (delete card r)
@@ -246,15 +255,10 @@ module Solitaire where
         where
             newCols = [filter (/= card) c | c <- cols] --(smart) filter
 
-    -- does the reserve have max number of cards?
-    isReserveFull :: Reserve -> Bool
-    isReserveFull reserve 
-        | length reserve == 8 = True
-        | otherwise = False
-
     --is there any empty column on the board
     isAnyEmptyCol :: Board -> Bool
     isAnyEmptyCol (EOBoard f c r) = (length c) < 8
+
     --move a card to reserve
     moveToReserve :: SCard -> Reserve -> Reserve
     moveToReserve card reserve
@@ -286,12 +290,19 @@ module Solitaire where
         | otherwise = False
     
     -- can the nth card in a column be moved to foundations?
-    isNthCardMoveable :: Columns -> Foundations -> Int -> Bool
-    isNthCardMoveable [] _ _ = False
+    -- if yes, return first card of the column that contains that card
+    isNthCardMoveable :: Columns -> Foundations -> Int -> (SCard,Bool)
+    isNthCardMoveable [] _ _ = ((Card (Three,Spades) False), False)
     isNthCardMoveable (headcol:restcols) found nth 
-      | length headcol <= (nth-1) = isNthCardMoveable (filter (not.null) restcols) found nth
-      | canBeMovedToFoundation (headcol !! (nth-1)) found = True
+      | length headcol <= (nth) = isNthCardMoveable (filter (not.null) restcols) found nth
+      | canBeMovedToFoundation (headcol !! nth) found = ((head headcol),True)
       | otherwise = isNthCardMoveable (filter (not.null) restcols) found nth
+
+    -- move to reserve the head of the column whose nth card can be moved to foundations
+    moveNthMvblColHeadRes :: Board -> Int -> Board 
+    moveNthMvblColHeadRes board@(EOBoard f cols res) nth = 
+        EOBoard f (getColumns(removeFromCol nthCard board)) (res ++ [nthCard])
+        where nthCard = fst (isNthCardMoveable cols f nth)
 
     --return first King in res, return random card and False otherwise
     getKingRes :: Reserve -> (SCard,Bool) 
@@ -325,35 +336,47 @@ module Solitaire where
             king = fst (getKingColHead cols)
             newCols = (getColumns (removeFromCol king board)) ++ [[king]]
 
-
-{-
-NOTES
-
--}
     -- CHOOSE THE NEXT MOVE -- 
     --return a list of all possible board states after a single move
     findMoves :: Board -> [Board]
     findMoves b = findMovesColstoCols [] b ++ findMovesReserves [] [] b ++ 
         findMovesColstoRes [] b 
-  
-   -- findBestMoves :: Board -> [Board]
--- there is atleast once space in reserve, and the 2nd card in a column can be moved to foundation, then move first card in column to reserve
+    
+    findMoves' :: Board ->[Board]
+    findMoves' board@(EOBoard f cols res) =
+        filter (/= (EOBoard [] [] []))
+        [(if (board /= (toFoundations board)) then (toFoundations board) else (EOBoard [] [] [])),
+        -- if the second card of a column can move to foundations, move the card on top of it to reserve
+         (if ((not (isReserveFull res)) && (snd (isNthCardMoveable cols f 1))) then (moveNthMvblColHeadRes board 1) else (EOBoard [] [] [])),
+         -- move king from reserves to empty column, if possible
+         (if ((isAnyEmptyCol board) && (snd (getKingRes res))) then (moveKingResToEmptyCol board) else (EOBoard [] [] [])),
+         -- move king from column to an empty column, if possible
+         (if ((isAnyEmptyCol board) && (snd (getKingColHead cols))) then (moveKingColToEmptyCol board) else (EOBoard [] [] [])) 
+         ]
 
-    chooseMove :: Board -> Board
+    maybeTo :: Maybe a -> a
+    maybeTo (Just x) = x 
+
+    chooseMove :: Board -> Maybe Board
     chooseMove b 
-        | length (findMoves b) == 0 = EOBoard [] [] []
-        | otherwise  = head (findMoves b)
+        | length (findMoves' b) >= 1 = Just ((head (findMoves' b)))
+        | otherwise = Nothing 
 
-    solve :: Board -> [Board]
-    solve (EOBoard [] [] []) = []
-    solve (b) 
-      | move == (EOBoard [] [] []) = []
-      | otherwise = [move] ++ solve(move)
-       where move = chooseMove b
-    ---------- HELPER FUNCTIONS FOR NEXT MOVE CHOICE ----------
--- move king from res to empty column
--- 
-   -- moveKingToEmptyColumn :: Board -> Board
+    haveWon :: Board -> Bool
+    haveWon (EOBoard f c r) = (null c) && (null r) 
+
+    score :: Board -> Int
+    score (EOBoard f c r) = 52- (length r) - (foldr (+) 0 (map length c))
+
+    playSolitaire :: Board -> Int
+    playSolitaire board@(EOBoard f c r) 
+        | null c && null r = score board
+        | chooseMove board /= Nothing = playSolitaire (maybeTo (chooseMove board))
+        | otherwise = score board
+
+    analyseEO :: Int -> Int -> [Int]
+    analyseEO _ 0 = []
+    analyseEO seed nGames = if playSolitaire (eODeal seed) == 52 then [seed] ++ (analyseEO (seed + 11) (nGames - 1)) else (analyseEO (seed + 1) (nGames - 1))
 
     ---------- SPIDER SOLITAIRE FUNCTIONS ----------
     sDeal :: Int -> Board
@@ -400,8 +423,7 @@ NOTES
                     [Card(Eight,Clubs)True,Card(Six,Hearts)True,Card(Seven,Clubs)True,Card(Eight,Spades)True,Card(Ten,Clubs)True,Card(Queen,Clubs)True],
                     [Card(Ace,Spades)True,Card(Eight,Clubs)True,Card(Ace,Diamonds)True,Card(King,Diamonds)True,Card(Jack,Hearts)True,Card(Four,Clubs)True],
                     [Card(Two,Spades)True,Card(Three,Hearts)True,Card(Two,Hearts)True,Card(Ten,Hearts)True,Card(Six,Diamonds)True,Card(Jack,Clubs)True],
-                    [Card(Ten,Diamonds)True,Card(Three,Clubs)True,Card(Nine,Clubs)True,Card(Nine,Hearts)True,Card(Three,Spades)True,Card(Ten,Spades)True],
-                    [Card(Jack,Diamonds)True,Card(Two,Spades)True,Card(Four,Hearts)True,Card(Nine,Diamonds)True,Card(King,Spades)True,Card(Eight,Hearts)True]
+                    [Card(King,Diamonds)True,Card(Three,Clubs)True,Card(Nine,Clubs)True,Card(Nine,Hearts)True,Card(Three,Spades)True,Card(Ten,Spades)True]
                     ] [Card(Five,Clubs)True,Card(Ace,Clubs)True,Card(Four,Diamonds)True,Card(Jack,Diamonds)True, Card (King,Spades) True]
   
     testColumns :: Columns
@@ -411,10 +433,14 @@ NOTES
                     [Card(Jack,Spades)True,Card(Six,Hearts)True,Card(Seven,Clubs)True,Card(Eight,Spades)True,Card(Ten,Clubs)True,Card(Queen,Clubs)True],
                     [Card(Ace,Spades)True,Card(Eight,Clubs)True,Card(Ace,Diamonds)True,Card(King,Diamonds)True,Card(Jack,Hearts)True,Card(Four,Clubs)True],
                     [Card(Two,Diamonds)True,Card(Three,Hearts)True,Card(Two,Hearts)True,Card(Ten,Hearts)True,Card(Six,Diamonds)True,Card(Jack,Clubs)True],
-                    [Card(Nine,Spades)True,Card(Three,Clubs)True,Card(Nine,Clubs)True,Card(Nine,Hearts)True,Card(Three,Spades)True,Card(Ten,Spades)True]
+                    [Card(Nine,Spades)True,Card(Three,Clubs)True,Card(Nine,Clubs)True,Card(Nine,Hearts)True,Card(Three,Spades)True,Card(Ten,Spades)True],
+                    [Card(Ace,Hearts) True, Card(Ace,Spades)True]
                     ]
     testReserve :: Reserve
     testReserve = [Card(King,Clubs)True,Card(Ace,Clubs)True,Card(Five,Clubs)True,Card(Jack,Diamonds)True]
 
     testColumn :: Deck
     testColumn = [Card (Six,Clubs) True,Card(Seven,Diamonds)True,Card(Ace,Hearts) True,Card(Queen,Hearts) True,Card(King,Clubs) True,Card(Four,Spades)True]
+
+    testB :: Board
+    testB = EOBoard [Card (Ace,Spades) True] [] [] 
