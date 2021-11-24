@@ -73,13 +73,8 @@ module Solitaire where
     instance (Show Stock) where
         show (Stock d) = (show x) ++ " Deals remaining" 
                     where  x = (length d) `div` 10
-    --     -- foundations can be the same
-    --     -- there are 10 columns, and some cards are not visible
-    --     -- 6 cards in first 4 piles, 5 cards in the rest 6 piles
-    --     --stock has 50 cards initially, and you can deal 10 cards from the stock at any time
-    --             --if there are no empty columns
     
-    -- board 
+    -- board datatype
     data Board = EOBoard Foundations Columns Reserve | SBoard Foundations Columns Stock 
     instance Eq  (Board) where
         (EOBoard f1 c1 r1) == (EOBoard f2 c2 r2) = f1 == f2 && c1 == c2 && r1 == r2
@@ -314,6 +309,7 @@ module Solitaire where
     getKingColHead :: Columns -> (SCard, Bool)
     getKingColHead [] = (Card (Three,Spades) False ,False) -- if no king, return a useless face down card
     getKingColHead (c:cols)
+        | null c = getKingColHead cols
         | isKing (head c) = (head c, True)
         | otherwise = getKingColHead cols
 -- ===================================== --
@@ -348,10 +344,19 @@ module Solitaire where
         [(if (board /= (toFoundations board)) then (toFoundations board) else (EOBoard [] [] [])),
         -- if the second card of a column can move to foundations, move the card on top of it to reserve
          (if ((not (isReserveFull res)) && (snd (isNthCardMoveable cols f 1))) then (moveNthMvblColHeadRes board 1) else (EOBoard [] [] [])),
+         (if (((length res) <= 6) && snd(isNthCardMoveable cols f 2)) then (moveNthMvblColHeadRes board 2) else (EOBoard [] [] [])),
+         (if (((length res) <= 5) && snd(isNthCardMoveable cols f 3)) then (moveNthMvblColHeadRes board 3) else (EOBoard [] [] [])),
+         (if (((length res) <= 4) && snd(isNthCardMoveable cols f 4)) then (moveNthMvblColHeadRes board 4) else (EOBoard [] [] [])),
+         (if (((length res) <= 3) && snd(isNthCardMoveable cols f 5)) then (moveNthMvblColHeadRes board 5) else (EOBoard [] [] [])),
+         (if (((length res) <= 2) && snd(isNthCardMoveable cols f 6)) then (moveNthMvblColHeadRes board 6) else (EOBoard [] [] [])),
+         (if (((length res) <= 1) && snd(isNthCardMoveable cols f 7)) then (moveNthMvblColHeadRes board 7) else (EOBoard [] [] [])),
          -- move king from reserves to empty column, if possible
          (if ((isAnyEmptyCol board) && (snd (getKingRes res))) then (moveKingResToEmptyCol board) else (EOBoard [] [] [])),
-         -- move king from column to an empty column, if possible
-         (if ((isAnyEmptyCol board) && (snd (getKingColHead cols))) then (moveKingColToEmptyCol board) else (EOBoard [] [] [])) 
+         -- move king from column head to an empty column, if possible
+         (if ((isAnyEmptyCol board) && (snd (getKingColHead cols))) then (moveKingColToEmptyCol board) else (EOBoard [] [] []))
+         -- move king from 2nd place in columns to empty col, if possible
+         -- if there are any successors between column heads, then move successor column head to the other column head
+
          ]
 
     maybeTo :: Maybe a -> a
@@ -363,20 +368,34 @@ module Solitaire where
         | otherwise = Nothing 
 
     haveWon :: Board -> Bool
-    haveWon (EOBoard f c r) = (null c) && (null r) 
+    haveWon board = (score board) == 52
 
     score :: Board -> Int
-    score (EOBoard f c r) = 52- (length r) - (foldr (+) 0 (map length c))
+    score (EOBoard f c r) = 52 - (length r) - (foldr (+) 0 (map length c))
 
+    -- play a game untill no more moves can be made, return score
     playSolitaire :: Board -> Int
     playSolitaire board@(EOBoard f c r) 
         | null c && null r = score board
         | chooseMove board /= Nothing = playSolitaire (maybeTo (chooseMove board))
         | otherwise = score board
 
-    analyseEO :: Int -> Int -> [Int]
-    analyseEO _ 0 = []
-    analyseEO seed nGames = if playSolitaire (eODeal seed) == 52 then [seed] ++ (analyseEO (seed + 11) (nGames - 1)) else (analyseEO (seed + 1) (nGames - 1))
+    -- play a number of different games starting with a seed
+    -- return the list of scores
+    allScores :: Int -> Int -> [Int]
+    allScores _ 0 = []
+    allScores seed nGames = [playSolitaire (eODeal seed)] ++ (allScores (seed + 1) (nGames - 1))
+
+    averageScore :: [Int] -> Float
+    averageScore xs = (fromIntegral (sum xs))/(fromIntegral (length xs))
+
+    -- play a number of different games starting with a seed
+    -- return number of wins, and average score
+    analyseEO :: Int -> Int -> (Int, Float)
+    analyseEO seed nGames = ((numberOfWins scores), (averageScore scores))
+        where 
+            scores = allScores seed nGames
+            numberOfWins = length.filter(==52)
 
     ---------- SPIDER SOLITAIRE FUNCTIONS ----------
     sDeal :: Int -> Board
