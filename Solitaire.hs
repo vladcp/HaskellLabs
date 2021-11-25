@@ -10,6 +10,7 @@ module Solitaire where
     import Data.List
     import System.Random
     import Debug.Trace
+    import Data.Maybe
     -- datatypes - basics
     data Suit = Hearts | Clubs | Spades | Diamonds deriving (Show, Eq, Enum)
 
@@ -101,10 +102,10 @@ module Solitaire where
                     showOnNewLine d = (show d) ++ "\n"   
 
     -- --initial layout from the assignment brief
-    initialLayout :: Board 
-    initialLayout = EOBoard []
+    initialBoard :: Board 
+    initialBoard = EOBoard []
                     [[Card (Ace,Clubs) True,Card(Seven,Diamonds)True,Card(Ace,Hearts) True,Card(Queen,Hearts) True,Card(King,Clubs) True,Card(Four,Spades)True],
-                    [Card(Five,Diamonds)True, Card(Queen,Clubs)True,Card(Three,Diamonds)True,Card(Five,Spades)True,Card(Six,Spades)True,Card(Seven,Hearts)True],
+                    [Card(Five,Diamonds)True, Card(Queen,Spades)True,Card(Three,Diamonds)True,Card(Five,Spades)True,Card(Six,Spades)True,Card(Seven,Hearts)True],
                     [Card(King,Hearts)True,Card(Ten,Diamonds)True,Card(Seven,Spades)True,Card(Queen,Diamonds)True,Card(Five,Hearts)True,Card(Eight,Diamonds)True],
                     [Card(Jack,Spades)True,Card(Six,Hearts)True,Card(Seven,Clubs)True,Card(Eight,Spades)True,Card(Ten,Clubs)True,Card(Queen,Clubs)True],
                     [Card(Ace,Spades)True,Card(Eight,Clubs)True,Card(Ace,Diamonds)True,Card(King,Diamonds)True,Card(Jack,Hearts)True,Card(Four,Clubs)True],
@@ -267,6 +268,10 @@ module Solitaire where
         | canMoveToColumn card deck = [card] ++ deck
         | card == (head deck) = tail deck --if it's the head card, delete it
         | otherwise = deck
+-- ===================================== --
+    -- given a card that can move to a column, move it to the correct column
+    moveToCorrectColumn :: SCard -> Columns -> Columns
+    moveToCorrectColumn card cols = map(\x -> if (sCard card) == head x then card:x else x) cols
 
     -- can this card be moved to any column?
     canMoveToAnyColumn :: SCard -> Columns -> Bool
@@ -277,13 +282,16 @@ module Solitaire where
 
     --can this card be placed on this column?
     canMoveToColumn :: SCard -> Deck -> Bool
-    canMoveToColumn card []
-        | isKing card = True --only a king can be placed on empty column
-        | otherwise = False
     canMoveToColumn card (c:column) 
         | not (isAce c) && (pCard c == card) = True
         | otherwise = False
     
+    -- from a deck (i.e. reserves or col heads) get all cards that can move to any column
+    getAllMovableCardsToCol :: Deck -> Columns -> Deck
+    getAllMovableCardsToCol deck cols = 
+        filter (\x -> canMoveToAnyColumn x nonEmptyCols) deck
+        where nonEmptyCols = filter (not.null) cols
+-- ===================================== --
     -- can the nth card in a column be moved to foundations?
     -- if yes, return first card of the column that contains that card
     isNthCardMoveable :: Columns -> Foundations -> Int -> (SCard,Bool)
@@ -308,14 +316,14 @@ module Solitaire where
     
     getKingColHead :: Columns -> (SCard, Bool)
     getKingColHead [] = (Card (Three,Spades) False ,False) -- if no king, return a useless face down card
-    getKingColHead (c:cols)
+    getKingColHead col@(c:cols)
         | null c = getKingColHead cols
-        | isKing (head c) = (head c, True)
+        | isKing (head c) = if length c > 1 then (head c, True) else (Card (Three,Spades) False ,False)
         | otherwise = getKingColHead cols
 -- ===================================== --
 
 -- ===================================== --
-    -- move king to empty col, but move the best king. try to move one from reserves first, to free up space
+    -- move king from reserves to empty column
     moveKingResToEmptyCol :: Board -> Board
     moveKingResToEmptyCol board@(EOBoard f cols res) =
         (EOBoard f (cols ++ [[king]]) (getReserve (removeFromRes king board)))
@@ -331,6 +339,14 @@ module Solitaire where
         where 
             king = fst (getKingColHead cols)
             newCols = (getColumns (removeFromCol king board)) ++ [[king]]
+
+    moveResCardToCols :: Board -> Board
+    moveResCardToCols board@(EOBoard f cols res) = 
+        (EOBoard f newCols newRes)
+        where
+            cardToMove = head (getAllMovableCardsToCol res cols)
+            newRes = getReserve (removeFromRes cardToMove board)
+            newCols = moveToCorrectColumn cardToMove cols
 
     -- CHOOSE THE NEXT MOVE -- 
     --return a list of all possible board states after a single move
@@ -353,10 +369,11 @@ module Solitaire where
          -- move king from reserves to empty column, if possible
          (if ((isAnyEmptyCol board) && (snd (getKingRes res))) then (moveKingResToEmptyCol board) else (EOBoard [] [] [])),
          -- move king from column head to an empty column, if possible
-         (if ((isAnyEmptyCol board) && (snd (getKingColHead cols))) then (moveKingColToEmptyCol board) else (EOBoard [] [] []))
+         (if ((isAnyEmptyCol board) && (snd (getKingColHead cols))) then (moveKingColToEmptyCol board) else (EOBoard [] [] [])),
          -- move king from 2nd place in columns to empty col, if possible
          -- if there are any successors between column heads, then move successor column head to the other column head
-
+        -- if there any cards in the reserve that can be put onto a column head, move card from reserve onto column head
+         (if (length (getAllMovableCardsToCol res cols) > 0) then (moveResCardToCols board) else (EOBoard [] [] []))
          ]
 
     maybeTo :: Maybe a -> a
@@ -444,22 +461,105 @@ module Solitaire where
                     [Card(Two,Spades)True,Card(Three,Hearts)True,Card(Two,Hearts)True,Card(Ten,Hearts)True,Card(Six,Diamonds)True,Card(Jack,Clubs)True],
                     [Card(King,Diamonds)True,Card(Three,Clubs)True,Card(Nine,Clubs)True,Card(Nine,Hearts)True,Card(Three,Spades)True,Card(Ten,Spades)True]
                     ] [Card(Five,Clubs)True,Card(Ace,Clubs)True,Card(Four,Diamonds)True,Card(Jack,Diamonds)True, Card (King,Spades) True]
-  
-    testColumns :: Columns
-    testColumns = [[Card (Six,Clubs) True,Card(Seven,Diamonds)True,Card(Ace,Hearts) True,Card(Queen,Hearts) True,Card(King,Clubs) True,Card(Four,Spades)True],
-                    [Card(King,Diamonds)True, Card(Queen,Clubs)True,Card(Three,Diamonds)True,Card(Five,Spades)True,Card(Six,Spades)True,Card(Seven,Hearts)True],
-                    [Card(Three,Hearts)True,Card(Ten,Diamonds)True,Card(Seven,Spades)True,Card(Queen,Diamonds)True,Card(Five,Hearts)True,Card(Eight,Diamonds)True],
-                    [Card(Jack,Spades)True,Card(Six,Hearts)True,Card(Seven,Clubs)True,Card(Eight,Spades)True,Card(Ten,Clubs)True,Card(Queen,Clubs)True],
-                    [Card(Ace,Spades)True,Card(Eight,Clubs)True,Card(Ace,Diamonds)True,Card(King,Diamonds)True,Card(Jack,Hearts)True,Card(Four,Clubs)True],
-                    [Card(Two,Diamonds)True,Card(Three,Hearts)True,Card(Two,Hearts)True,Card(Ten,Hearts)True,Card(Six,Diamonds)True,Card(Jack,Clubs)True],
-                    [Card(Nine,Spades)True,Card(Three,Clubs)True,Card(Nine,Clubs)True,Card(Nine,Hearts)True,Card(Three,Spades)True,Card(Ten,Spades)True],
-                    [Card(Ace,Hearts) True, Card(Ace,Spades)True]
-                    ]
-    testReserve :: Reserve
-    testReserve = [Card(King,Clubs)True,Card(Ace,Clubs)True,Card(Five,Clubs)True,Card(Jack,Diamonds)True]
+   
+    -- ===================================== --
+    -- ===================================== --
+    {- Paste the contents of this file, including this comment, into your source file, below all
+     of your code. You can change the indentation to align with your own, but other than this,
+     ONLY make changes as instructed in the comments.
+   -}
+    -- Constants that YOU must set:
+    studentName = "Vlad-Cristian Prisacariu"
+    studentNumber = "200131014"
+    studentUsername = "aca19vcp"
 
-    testColumn :: Deck
-    testColumn = [Card (Six,Clubs) True,Card(Seven,Diamonds)True,Card(Ace,Hearts) True,Card(Queen,Hearts) True,Card(King,Clubs) True,Card(Four,Spades)True]
+    initialBoardDefined = initialBoard {- replace XXX with the name of the constant that you defined
+                                 in step 3 of part 1 -}
+    secondBoardDefined = testBoard {- replace YYY with the constant defined in step 5 of part 1,
+                                or if you have chosen to demonstrate play in a different game
+                                of solitaire for part 2, a suitable contstant that will show
+                                your play to good effect for that game -}
 
-    testB :: Board
-    testB = EOBoard [Card (Ace,Spades) True] [] [] 
+    {- Beyond this point, the ONLY change you should make is to change the comments so that the
+       work you have completed is tested. DO NOT change anything other than comments (and indentation
+       if needed). The comments in the template file are set up so that only the constant eight-off
+       board from part 1 and the toFoundations function from part 1 are tested. You will probably
+       want more than this tested.
+
+       CHECK with Emma or one of the demonstrators if you are unsure how to change this.
+
+       If you mess this up, your code will not compile, which will lead to being awarded 0 marks
+       for functionality and style.
+    -}
+
+    main :: IO()
+    main =
+      do
+        putStrLn $ "Output for " ++ studentName ++ " (" ++ studentNumber ++ ", " ++ studentUsername ++ ")"
+
+        putStrLn "***The eight-off initial board constant from part 1:"
+        print initialBoardDefined
+
+        let board = toFoundations initialBoardDefined
+        putStrLn "***The result of calling toFoundations on that board:"
+        print board
+
+        {- Move the start comment marker below to the appropriate position.
+          If you have completed ALL the tasks for the assignment, you can
+          remove the comments from the main function entirely.
+          DO NOT try to submit/run non-functional code - you will receive 0 marks
+          for ALL your code if you do, even if *some* of your code is correct.
+        -}
+
+        -- start comment marker - move this if appropriate
+
+        let boards = findMoves board      -- show that findMoves is working
+        putStrLn "***The possible next moves after that:"
+        print boards
+
+        let chosen = chooseMove board     -- show that chooseMove is working
+        putStrLn "***The chosen move from that set:"
+        print chosen
+
+        putStrLn "***Now showing a full game"     -- display a full game
+        score <- displayGame initialBoardDefined 0
+        putStrLn $ "Score: " ++ score
+        putStrLn $ "and if I'd used playSolitaire, I would get score: " ++ show (playSolitaire initialBoardDefined)
+
+        {-
+        putStrLn "\n\n\n************\nNow looking at the alternative game:"
+
+        putStrLn "***The spider initial board constant from part 1 (or equivalent if playing a different game of solitaire):"
+        print secondBoardDefined          -- show the suitable constant. For spider solitaire this
+                                          -- is not an initial game, but a point from which the game
+                                          -- can be won
+
+        putStrLn "***Now showing a full game for alternative solitaire"
+        score <- displayGame secondBoardDefined 0 -- see what happens when we play that game (assumes chooseMove
+                                                  -- works correctly)
+        putStrLn $ "Score: " ++ score
+        putStrLn $ "and if I'd used playSolitaire, I would get score: " ++ show (playSolitaire secondBoardDefined)
+        -}    
+
+    {- displayGame takes a Board and move number (should initially be 0) and
+       displays the game step-by-step (board-by-board). The result *should* be
+       the same as performing playSolitaire on the initial board, if it has been
+       implemented correctly.
+       DO NOT CHANGE THIS CODE other than aligning indentation with your own.
+    -}
+    displayGame :: Board -> Int ->IO String
+    displayGame board n =
+      if haveWon board
+        then return "A WIN"
+        else
+          do
+            putStr ("Move " ++ show n ++ ": " ++ show board)
+            let maybeBoard = chooseMove board
+            if isJust maybeBoard then
+              do
+                let (Just newBoard) = maybeBoard
+                displayGame newBoard (n+1)
+            else
+              do
+                let score = show (playSolitaire board)
+                return score
