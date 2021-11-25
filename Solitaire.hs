@@ -269,28 +269,27 @@ module Solitaire where
         | card == (head deck) = tail deck --if it's the head card, delete it
         | otherwise = deck
 -- ===================================== --
-    -- given a card that can move to a column, move it to the correct column
-    moveToCorrectColumn :: SCard -> Columns -> Columns
-    moveToCorrectColumn card cols = map(\x -> if (sCard card) == head x then card:x else x) cols
-
-    -- can this card be moved to any column?
-    canMoveToAnyColumn :: SCard -> Columns -> Bool
-    canMoveToAnyColumn _ [] = False
-    canMoveToAnyColumn card (c:cols) 
-        | canMoveToColumn card c = True
-        | otherwise = canMoveToAnyColumn card cols
-
     --can this card be placed on this column?
     canMoveToColumn :: SCard -> Deck -> Bool
     canMoveToColumn card (c:column) 
         | not (isAce c) && (pCard c == card) = True
         | otherwise = False
+
+    -- can this card be moved to any column?
+    canMoveToAnyColumn :: SCard -> Columns -> Bool
+    canMoveToAnyColumn _ [] = False
+    canMoveToAnyColumn card cols = or (map (\x -> canMoveToColumn card x) cols)
     
     -- from a deck (i.e. reserves or col heads) get all cards that can move to any column
     getAllMovableCardsToCol :: Deck -> Columns -> Deck
     getAllMovableCardsToCol deck cols = 
         filter (\x -> canMoveToAnyColumn x nonEmptyCols) deck
         where nonEmptyCols = filter (not.null) cols
+    
+    -- given a card that can move to a column, move it to the correct column
+    moveToCorrectColumn :: SCard -> Columns -> Columns
+    moveToCorrectColumn card cols = map(\x -> if (sCard card) == head x then card:x else x) cols
+
 -- ===================================== --
     -- can the nth card in a column be moved to foundations?
     -- if yes, return first card of the column that contains that card
@@ -307,13 +306,14 @@ module Solitaire where
         EOBoard f (getColumns(removeFromCol nthCard board)) (res ++ [nthCard])
         where nthCard = fst (isNthCardMoveable cols f nth)
 
-    --return first King in res, return random card and False otherwise
+    --return first King in res and True, random card and False otherwise
     getKingRes :: Reserve -> (SCard,Bool) 
     getKingRes [] = (Card (Three,Spades) False ,False) -- if no king, return a useless face down card
     getKingRes (r:res) 
         | isKing r = (r,True)
         | otherwise = getKingRes res
     
+    --return first Kind in column heads and True, random card and False otherwise
     getKingColHead :: Columns -> (SCard, Bool)
     getKingColHead [] = (Card (Three,Spades) False ,False) -- if no king, return a useless face down card
     getKingColHead col@(c:cols)
@@ -371,9 +371,10 @@ module Solitaire where
          -- move king from column head to an empty column, if possible
          (if ((isAnyEmptyCol board) && (snd (getKingColHead cols))) then (moveKingColToEmptyCol board) else (EOBoard [] [] [])),
          -- move king from 2nd place in columns to empty col, if possible
-         -- if there are any successors between column heads, then move successor column head to the other column head
         -- if there any cards in the reserve that can be put onto a column head, move card from reserve onto column head
          (if (length (getAllMovableCardsToCol res cols) > 0) then (moveResCardToCols board) else (EOBoard [] [] []))
+         -- if there are any successors between column heads, then move successor column head to the other column head
+
          ]
 
     maybeTo :: Maybe a -> a
