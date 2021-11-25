@@ -114,21 +114,26 @@ module Solitaire where
                     [Card(Two,Clubs)True,Card(Two,Spades)True,Card(Four,Hearts)True,Card(Nine,Diamonds)True,Card(King,Spades)True,Card(Eight,Hearts)True]
                     ] [Card(Two,Hearts)True,Card(Six,Clubs)True,Card(Five,Clubs)True,Card(Jack,Diamonds)True]
 
-    -- initialSBoard :: Board 
-    -- initialSBoard = SBoard [Card (King, Hearts) True]
-    --                 [[Card (Eight,Diamonds) True, Card (Nine,Hearts) True],
-    --                 [Card (Ace,Spades) True, Card (Two,Spades) True, Card (Three,Spades) True, Card (Four,Spades) True ,Card (Five,Spades) True, Card (Six,Clubs) True, 
-    --                 Card (Seven,Clubs) True, Card (Eight,Clubs) True, Card (Nine,Clubs) True, Card (Ten,Diamonds) True, Card (Jack,Diamonds) True,Card (Queen,Diamonds) True, Card (King,Diamonds) True],
-    --                 [Card (Seven,Clubs) True, Card (Eight, Diamonds) True, Card (Nine,Diamonds) True, Card (Ten,Diamonds) True, Card (Jack,Diamonds) True, Card (Queen, Diamonds) True, Card(King,Diamonds) True,
-    --                 Card (Nine,Clubs) True, Card (Ten,Hearts) True, Card (Jack,Clubs) True],
-    --                 [Card (Ace, Hearts) True, Card (Two,Hearts) True, Card (Three, Hearts) True, Card (Four, Hearts) True, Card (Five,Hearts) True, Card (Six,Diamonds) True, 
-    --                 Card (Seven,Diamonds) True, Card (Queen,Clubs) True, Card (King, Hearts) True],
-    --                 [Card (Two,Diamonds) True, Card (Three, Diamonds) True, Card (Four, Diamonds) True],
-    --                 [Card (Jack,Clubs) True, Card (Queen,Clubs) True, Card (King,Clubs) True, Card (Two, Spades) True, Card (Three,Spades) True, Card (Four,Diamonds) True, Card (Five,Diamonds) True,
-    --                 Card (Six,Diamonds) True, Card (Seven, Hearts) True, Card (Eight, Clubs) True]
-    --                 ]
-    --                 [[]]
-
+    initialSBoard :: Board 
+    initialSBoard = SBoard [Card (King, Hearts) True]
+                    [[Card (Eight,Diamonds) True, Card (Nine,Hearts) True],
+                    [Card (Two, Diamonds) True],
+                    [Card (Ace,Spades) True, Card (Two,Spades) True, Card (Three,Spades) True, Card (Four,Spades) True ,Card (Five,Spades) True, Card (Six,Clubs) True, 
+                        Card (Seven,Clubs) True, Card (Eight,Clubs) True, Card (Nine,Clubs) True, Card (Ten,Diamonds) True, Card (Jack,Diamonds) True,Card (Queen,Diamonds) True, Card (King,Diamonds) True], -- 2 more here
+                    [Card (Seven,Clubs) True, Card (Eight, Diamonds) True, Card (Nine,Diamonds) True, Card (Ten,Diamonds) True, Card (Jack,Diamonds) True, Card (Queen, Diamonds) True, Card(King,Diamonds) True,
+                        Card (Nine,Clubs) True, Card (Ten,Hearts) True, Card (Jack,Clubs) True],
+                    [Card (Ace, Hearts) True, Card (Two,Hearts) True, Card (Three, Hearts) True, Card (Four, Hearts) True, Card (Five,Hearts) True, Card (Six,Diamonds) True, 
+                        Card (Seven,Diamonds) True, Card (Queen,Clubs) True, Card (King, Hearts) True],
+                    [Card (Two,Diamonds) True, Card (Three, Diamonds) True, Card (Four, Diamonds) True],
+                    [Card (Jack,Clubs) True, Card (Queen,Clubs) True, Card (King,Clubs) True, Card (Two, Spades) True, Card (Three,Spades) True, Card (Four,Diamonds) True, Card (Five,Diamonds) True,
+                        Card (Six,Diamonds) True, Card (Seven, Hearts) True, Card (Eight, Clubs) True, Card (Nine, Spades) True, Card (Ten, Clubs) True, Card (Ace, Clubs) True, Card (Two, Clubs) True, Card (Three, Clubs) True,
+                        Card (Four, Clubs) True, Card (Five, Spades) True],
+                    [Card (Seven, Spades) True, Card (Eight, Spades) True, Card (Nine, Spades) True, Card (Ten, Spades) True, Card (Jack, Spades) True, Card (Queen,Spades) True, Card (King,Spades) True], -- 3 more here
+                    [Card (Jack,Hearts) True, Card (Queen, Hearts) True],
+                    [Card (Ace,Clubs) True, Card (Two,Clubs) True]
+                    ]
+                    (Stock []) -- 20 cards here
+-- A,S; A,H; 2x A,D; 2H, 3C, 3H, 3D
     ---------- EIGHT OFF FUNCTIONS ----------
     --eODeal takes a seed as a paramater
     -- and deals a randomly shuffled deck for eight off 
@@ -233,6 +238,9 @@ module Solitaire where
 
     -- ===================================== --
 ---------- HELPER FUNCTIONS FOR NEXT MOVE CHOICE ----------
+    getColHeads :: Columns -> Deck
+    getColHeads [] = []
+    getColHeads cols = map (head) (filter (not.null) cols)
 
      -- does the reserve have max number of cards?
     isReserveFull :: Reserve -> Bool
@@ -271,6 +279,7 @@ module Solitaire where
 -- ===================================== --
     --can this card be placed on this column?
     canMoveToColumn :: SCard -> Deck -> Bool
+    canMoveToColumn card [] = False
     canMoveToColumn card (c:column) 
         | not (isAce c) && (pCard c == card) = True
         | otherwise = False
@@ -282,13 +291,14 @@ module Solitaire where
     
     -- from a deck (i.e. reserves or col heads) get all cards that can move to any column
     getAllMovableCardsToCol :: Deck -> Columns -> Deck
+    getAllMovableCardsToCol [] cols = []
     getAllMovableCardsToCol deck cols = 
         filter (\x -> canMoveToAnyColumn x nonEmptyCols) deck
         where nonEmptyCols = filter (not.null) cols
     
     -- given a card that can move to a column, move it to the correct column
     moveToCorrectColumn :: SCard -> Columns -> Columns
-    moveToCorrectColumn card cols = map(\x -> if (sCard card) == head x then card:x else x) cols
+    moveToCorrectColumn card cols = map(\x -> if (sCard card) == head x then card:x else x) (filter (not.null) cols)
 
 -- ===================================== --
     -- can the nth card in a column be moved to foundations?
@@ -340,6 +350,8 @@ module Solitaire where
             king = fst (getKingColHead cols)
             newCols = (getColumns (removeFromCol king board)) ++ [[king]]
 
+    -- move a card from reserve to columns, if possible
+    -- this will free up reserve spaces
     moveResCardToCols :: Board -> Board
     moveResCardToCols board@(EOBoard f cols res) = 
         (EOBoard f newCols newRes)
@@ -347,6 +359,14 @@ module Solitaire where
             cardToMove = head (getAllMovableCardsToCol res cols)
             newRes = getReserve (removeFromRes cardToMove board)
             newCols = moveToCorrectColumn cardToMove cols
+
+    -- move card from a column to another column (assume there is one)
+    moveColsCardToCols :: Board -> Board
+    moveColsCardToCols board@(EOBoard f cols res) = 
+        (EOBoard f newCols res)
+        where 
+            cardToMove = head (getAllMovableCardsToCol (getColHeads cols) cols)
+            newCols = filter (not.null) (moveToCorrectColumn cardToMove (getColumns (removeFromCol cardToMove board)))
 
     -- CHOOSE THE NEXT MOVE -- 
     --return a list of all possible board states after a single move
@@ -358,7 +378,7 @@ module Solitaire where
     findMoves' board@(EOBoard f cols res) =
         filter (/= (EOBoard [] [] []))
         [(if (board /= (toFoundations board)) then (toFoundations board) else (EOBoard [] [] [])),
-        -- if the second card of a column can move to foundations, move the card on top of it to reserve
+        -- if the nth card of a column can move to foundations, move the cards on top of it to reserve, if possible
          (if ((not (isReserveFull res)) && (snd (isNthCardMoveable cols f 1))) then (moveNthMvblColHeadRes board 1) else (EOBoard [] [] [])),
          (if (((length res) <= 6) && snd(isNthCardMoveable cols f 2)) then (moveNthMvblColHeadRes board 2) else (EOBoard [] [] [])),
          (if (((length res) <= 5) && snd(isNthCardMoveable cols f 3)) then (moveNthMvblColHeadRes board 3) else (EOBoard [] [] [])),
@@ -372,9 +392,9 @@ module Solitaire where
          (if ((isAnyEmptyCol board) && (snd (getKingColHead cols))) then (moveKingColToEmptyCol board) else (EOBoard [] [] [])),
          -- move king from 2nd place in columns to empty col, if possible
         -- if there any cards in the reserve that can be put onto a column head, move card from reserve onto column head
-         (if (length (getAllMovableCardsToCol res cols) > 0) then (moveResCardToCols board) else (EOBoard [] [] []))
+         (if (length (getAllMovableCardsToCol res cols) > 0) then (moveResCardToCols board) else (EOBoard [] [] [])),
          -- if there are any successors between column heads, then move successor column head to the other column head
-
+         (if (length (getAllMovableCardsToCol (getColHeads cols) cols)) > 0 then (moveColsCardToCols board) else (EOBoard [] [] []))
          ]
 
     maybeTo :: Maybe a -> a
@@ -445,12 +465,12 @@ module Solitaire where
                     [[Card (Six,Clubs) True,Card(Seven,Diamonds)True,Card(Ace,Hearts) True,Card(Queen,Hearts) True,Card(King,Clubs) True,Card(Four,Spades)True],
                     [Card(Five,Diamonds)True, Card(Queen,Clubs)True,Card(Three,Diamonds)True,Card(Five,Spades)True,Card(Six,Spades)True,Card(Seven,Hearts)True],
                     [Card(King,Hearts)True,Card(Ten,Diamonds)True,Card(Seven,Spades)True,Card(Queen,Diamonds)True,Card(Five,Hearts)True,Card(Eight,Diamonds)True],
-                    [Card(Jack,Spades)True,Card(Six,Hearts)True,Card(Seven,Clubs)True,Card(Eight,Spades)True,Card(Ten,Clubs)True,Card(Queen,Clubs)True],
+                    [Card(Jack,Spades)True,Card(Six,Hearts)True,Card(Seven,Clubs)True,Card(Five,Clubs)True,Card(Ten,Clubs)True,Card(Queen,Clubs)True],
                     [Card(Ace,Spades)True,Card(Eight,Clubs)True,Card(Ace,Diamonds)True,Card(King,Diamonds)True,Card(Jack,Hearts)True,Card(Four,Clubs)True],
                     [Card(Two,Diamonds)True,Card(Three,Hearts)True,Card(Two,Hearts)True,Card(Ten,Hearts)True,Card(Six,Diamonds)True,Card(Jack,Clubs)True],
                     [Card(Nine,Spades)True,Card(Three,Clubs)True,Card(Nine,Clubs)True,Card(Nine,Hearts)True,Card(Three,Spades)True,Card(Ten,Spades)True],
-                    [Card(Two,Clubs)True,Card(Two,Spades)True,Card(Four,Hearts)True,Card(Nine,Diamonds)True,Card(King,Spades)True,Card(Eight,Hearts)True]
-                    ] [Card(Five,Clubs)True,Card(Ace,Clubs)True,Card(Four,Diamonds)True,Card(Jack,Diamonds)True]
+                    [Card(Eight,Spades)True,Card(Two,Spades)True,Card(Four,Hearts)True,Card(Nine,Diamonds)True,Card(King,Spades)True,Card(Eight,Hearts)True]
+                    ] [Card(Two,Clubs)True,Card(Ace,Clubs)True,Card(Four,Diamonds)True,Card(Jack,Diamonds)True]
 -- a board meant for testing, it does have repeated cards
     testBoard2 :: Board 
     testBoard2 = EOBoard []
