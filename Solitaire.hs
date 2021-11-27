@@ -3,7 +3,7 @@ Solitaire.hs
 Stage One of the Graded Assignment
 
 Vlad-Cristian Prisacariu
-last modified: 25/10/2021
+last modified: 27/11/2021
 -}
 
 module Solitaire where
@@ -72,7 +72,7 @@ module Solitaire where
     -- datatypes - Spider Solitaire
     data Stock = Stock Deck 
     instance (Show Stock) where
-        show (Stock d) = (show x) ++ " Deals remaining" 
+        show (Stock d) = (show x) ++ " deals remaining" 
                     where  x = (length d) `div` 10
     
     -- board datatype
@@ -100,40 +100,7 @@ module Solitaire where
             showColumns col = concatMap (showOnNewLine) col
                 where
                     showOnNewLine d = (show d) ++ "\n"   
-
-    -- --initial layout from the assignment brief
-    initialBoard :: Board 
-    initialBoard = EOBoard []
-                    [[Card (Ace,Clubs) True,Card(Seven,Diamonds)True,Card(Ace,Hearts) True,Card(Queen,Hearts) True,Card(King,Clubs) True,Card(Four,Spades)True],
-                    [Card(Five,Diamonds)True, Card(Queen,Spades)True,Card(Three,Diamonds)True,Card(Five,Spades)True,Card(Six,Spades)True,Card(Seven,Hearts)True],
-                    [Card(King,Hearts)True,Card(Ten,Diamonds)True,Card(Seven,Spades)True,Card(Queen,Diamonds)True,Card(Five,Hearts)True,Card(Eight,Diamonds)True],
-                    [Card(Jack,Spades)True,Card(Six,Hearts)True,Card(Seven,Clubs)True,Card(Eight,Spades)True,Card(Ten,Clubs)True,Card(Queen,Clubs)True],
-                    [Card(Ace,Spades)True,Card(Eight,Clubs)True,Card(Ace,Diamonds)True,Card(King,Diamonds)True,Card(Jack,Hearts)True,Card(Four,Clubs)True],
-                    [Card(Two,Diamonds)True,Card(Three,Hearts)True,Card(Three,Clubs)True,Card(Ten,Hearts)True,Card(Six,Diamonds)True,Card(Jack,Clubs)True],
-                    [Card(Nine,Spades)True,Card(Four,Diamonds)True,Card(Nine,Clubs)True,Card(Nine,Hearts)True,Card(Three,Spades)True,Card(Ten,Spades)True],
-                    [Card(Two,Clubs)True,Card(Two,Spades)True,Card(Four,Hearts)True,Card(Nine,Diamonds)True,Card(King,Spades)True,Card(Eight,Hearts)True]
-                    ] [Card(Two,Hearts)True,Card(Six,Clubs)True,Card(Five,Clubs)True,Card(Jack,Diamonds)True]
-
-    initialSBoard :: Board 
-    initialSBoard = SBoard [Card (King, Hearts) True]
-                    [[Card (Eight,Diamonds) True, Card (Nine,Hearts) True],
-                    [Card (Two, Diamonds) True],
-                    [Card (Ace,Spades) True, Card (Two,Spades) True, Card (Three,Spades) True, Card (Four,Spades) True ,Card (Five,Spades) True, Card (Six,Clubs) True, 
-                        Card (Seven,Clubs) True, Card (Eight,Clubs) True, Card (Nine,Clubs) True, Card (Ten,Diamonds) True, Card (Jack,Diamonds) True,Card (Queen,Diamonds) True, Card (King,Diamonds) True], -- 2 more here
-                    [Card (Seven,Clubs) True, Card (Eight, Diamonds) True, Card (Nine,Diamonds) True, Card (Ten,Diamonds) True, Card (Jack,Diamonds) True, Card (Queen, Diamonds) True, Card(King,Diamonds) True,
-                        Card (Nine,Clubs) True, Card (Ten,Hearts) True, Card (Jack,Clubs) True],
-                    [Card (Ace, Hearts) True, Card (Two,Hearts) True, Card (Three, Hearts) True, Card (Four, Hearts) True, Card (Five,Hearts) True, Card (Six,Diamonds) True, 
-                        Card (Seven,Diamonds) True, Card (Queen,Clubs) True, Card (King, Hearts) True],
-                    [Card (Two,Diamonds) True, Card (Three, Diamonds) True, Card (Four, Diamonds) True],
-                    [Card (Jack,Clubs) True, Card (Queen,Clubs) True, Card (King,Clubs) True, Card (Two, Spades) True, Card (Three,Spades) True, Card (Four,Diamonds) True, Card (Five,Diamonds) True,
-                        Card (Six,Diamonds) True, Card (Seven, Hearts) True, Card (Eight, Clubs) True, Card (Nine, Spades) True, Card (Ten, Clubs) True, Card (Ace, Clubs) True, Card (Two, Clubs) True, Card (Three, Clubs) True,
-                        Card (Four, Clubs) True, Card (Five, Spades) True],
-                    [Card (Seven, Spades) True, Card (Eight, Spades) True, Card (Nine, Spades) True, Card (Ten, Spades) True, Card (Jack, Spades) True, Card (Queen,Spades) True, Card (King,Spades) True], -- 3 more here
-                    [Card (Jack,Hearts) True, Card (Queen, Hearts) True],
-                    [Card (Ace,Clubs) True, Card (Two,Clubs) True]
-                    ]
-                    (Stock []) -- 20 cards here
--- A,S; A,H; 2x A,D; 2H, 3C, 3H, 3D
+                    
     ---------- EIGHT OFF FUNCTIONS ----------
     --eODeal takes a seed as a paramater
     -- and deals a randomly shuffled deck for eight off 
@@ -331,8 +298,6 @@ module Solitaire where
         | isKing (head c) = if length c > 1 then (head c, True) else (Card (Three,Spades) False ,False)
         | otherwise = getKingColHead cols
 -- ===================================== --
-
--- ===================================== --
     -- move king from reserves to empty column
     moveKingResToEmptyCol :: Board -> Board
     moveKingResToEmptyCol board@(EOBoard f cols res) =
@@ -457,6 +422,61 @@ module Solitaire where
                 -- last 6 columns have 5 cards each
                 splitSecond [] = []
                 splitSecond d = [(take 5 d)] ++ splitSecond (drop 5 d)
+
+    -- stock deck getter
+    getStock :: Stock -> Deck
+    getStock (Stock d) = d 
+
+    --given columns and a deck, deal each card of the deck to each column
+    dealDeckToCols :: Columns -> Deck -> Columns
+    dealDeckToCols [] [] = []
+    dealDeckToCols (c:cols) (d:cards) = ([d] ++ c):(dealDeckToCols cols cards)
+
+    -- deal 10 cards from stock, if there are no empty columns
+    moveStockToCols :: Board -> Board
+    moveStockToCols (SBoard f cols s) = SBoard f (dealDeckToCols cols cardsToDeal) newStock
+        where 
+            stock = getStock s
+            cardsToDeal = map (toggleVisibility) (take 10 stock)
+            newStock = Stock (drop 10 stock)
+
+    ------------- INITIAL BOARDS -------------
+    --initial layouts from the assignment brief
+
+    initialBoard :: Board 
+    initialBoard = EOBoard []
+                    [[Card (Ace,Clubs) True,Card(Seven,Diamonds)True,Card(Ace,Hearts) True,Card(Queen,Hearts) True,Card(King,Clubs) True,Card(Four,Spades)True],
+                    [Card(Five,Diamonds)True, Card(Queen,Spades)True,Card(Three,Diamonds)True,Card(Five,Spades)True,Card(Six,Spades)True,Card(Seven,Hearts)True],
+                    [Card(King,Hearts)True,Card(Ten,Diamonds)True,Card(Seven,Spades)True,Card(Queen,Diamonds)True,Card(Five,Hearts)True,Card(Eight,Diamonds)True],
+                    [Card(Jack,Spades)True,Card(Six,Hearts)True,Card(Seven,Clubs)True,Card(Eight,Spades)True,Card(Ten,Clubs)True,Card(Queen,Clubs)True],
+                    [Card(Ace,Spades)True,Card(Eight,Clubs)True,Card(Ace,Diamonds)True,Card(King,Diamonds)True,Card(Jack,Hearts)True,Card(Four,Clubs)True],
+                    [Card(Two,Diamonds)True,Card(Three,Hearts)True,Card(Three,Clubs)True,Card(Ten,Hearts)True,Card(Six,Diamonds)True,Card(Jack,Clubs)True],
+                    [Card(Nine,Spades)True,Card(Four,Diamonds)True,Card(Nine,Clubs)True,Card(Nine,Hearts)True,Card(Three,Spades)True,Card(Ten,Spades)True],
+                    [Card(Two,Clubs)True,Card(Two,Spades)True,Card(Four,Hearts)True,Card(Nine,Diamonds)True,Card(King,Spades)True,Card(Eight,Hearts)True]
+                    ] [Card(Two,Hearts)True,Card(Six,Clubs)True,Card(Five,Clubs)True,Card(Jack,Diamonds)True]
+
+    initialSBoard :: Board 
+    initialSBoard = SBoard [Card (King, Hearts) True]
+                    [[Card (Eight,Diamonds) True, Card (Nine,Hearts) True],
+                    [Card (Two, Diamonds) True],
+                    [Card (Ace,Spades) True, Card (Two,Spades) True, Card (Three,Spades) True, Card (Four,Spades) True ,Card (Five,Spades) True, Card (Six,Clubs) True, 
+                        Card (Seven,Clubs) True, Card (Eight,Clubs) True, Card (Nine,Clubs) True, Card (Ten,Diamonds) True, Card (Jack,Diamonds) True,Card (Queen,Diamonds) True, Card (King,Diamonds) True, Card (Eight,Spades) False, Card (Ten,Hearts) False], -- 2 more here
+                    [Card (Seven,Clubs) True, Card (Eight, Diamonds) True, Card (Nine,Diamonds) True, Card (Ten,Diamonds) True, Card (Jack,Diamonds) True, Card (Queen, Diamonds) True, Card(King,Diamonds) True,
+                        Card (Nine,Clubs) True, Card (Ten,Hearts) True, Card (Jack,Clubs) True],
+                    [Card (Ace, Hearts) True, Card (Two,Hearts) True, Card (Three, Hearts) True, Card (Four, Hearts) True, Card (Five,Hearts) True, Card (Six,Diamonds) True, 
+                        Card (Seven,Diamonds) True, Card (Queen,Clubs) True, Card (King, Hearts) True],
+                    [Card (Two,Diamonds) True, Card (Three, Diamonds) True, Card (Four, Diamonds) True],
+                    [Card (Jack,Clubs) True, Card (Queen,Clubs) True, Card (King,Clubs) True, Card (Two, Spades) True, Card (Three,Spades) True, Card (Four,Diamonds) True, Card (Five,Diamonds) True,
+                        Card (Six,Diamonds) True, Card (Seven, Hearts) True, Card (Eight, Clubs) True, Card (Nine, Spades) True, Card (Ten, Clubs) True, Card (Ace, Clubs) True, Card (Two, Clubs) True, Card (Three, Clubs) True,
+                        Card (Four, Clubs) True, Card (Five, Spades) True],
+                    [Card (Seven, Spades) True, Card (Eight, Spades) True, Card (Nine, Spades) True, Card (Ten, Spades) True, Card (Jack, Spades) True, Card (Queen,Spades) True, Card (King,Spades) True, Card (Five,Clubs) False, Card (Ace,Diamonds) False, Card (Jack,Spades) False], -- 3 more here
+                    [Card (Jack,Hearts) True, Card (Queen, Hearts) True],
+                    [Card (Ace,Clubs) True, Card (Two,Clubs) True]
+                    ]
+                    (Stock [Card (Six, Clubs) False, Card (Nine, Diamonds) False, Card (Ten, Clubs) False, Card (Ace, Diamonds)False, Card (Three, Clubs) False, Card (Four, Spades) False, Card (Queen, Spades) False, Card (Six, Hearts) False,
+                    Card (Three, Diamonds) False, Card (Six, Spades) False, Card (Ten,Spades) False, Card (King, Spades) False, Card (Eight, Hearts) False, Card (Six, Spades) False, Card (Four, Clubs) False, Card (Ace, Spades) False, 
+                    Card (Five, Diamonds) False, Card (King, Clubs) False, Card (Seven, Diamonds) False, Card (Seven, Spades) False]) -- 20 cards heres
+    
     
     ------------- TESTING BOARDS -------------
 
@@ -483,6 +503,13 @@ module Solitaire where
                     [Card(King,Diamonds)True,Card(Three,Clubs)True,Card(Nine,Clubs)True,Card(Nine,Hearts)True,Card(Three,Spades)True,Card(Ten,Spades)True]
                     ] [Card(Five,Clubs)True,Card(Ace,Clubs)True,Card(Four,Diamonds)True,Card(Jack,Diamonds)True, Card (King,Spades) True]
    
+    testColumns :: Columns
+    testColumns = [[Card (Six,Clubs) True,Card(Seven,Diamonds)True,Card(Ace,Hearts) True,Card(Queen,Hearts) True,Card(King,Clubs) True,Card(Four,Spades)True],
+                    [Card(Queen,Diamonds)True, Card(Queen,Clubs)True,Card(Three,Diamonds)True,Card(Five,Spades)True,Card(Six,Spades)True,Card(Seven,Hearts)True],
+                    [Card(King,Hearts)True,Card(Ten,Diamonds)True,Card(Seven,Spades)True,Card(Queen,Diamonds)True,Card(Five,Hearts)True,Card(Eight,Diamonds)True],
+                    [Card(Eight,Clubs)True,Card(Six,Hearts)True,Card(Seven,Clubs)True,Card(Eight,Spades)True,Card(Ten,Clubs)True,Card(Queen,Clubs)True]]
+
+    testDeck = [Card(Ace,Spades)True,Card(Eight,Clubs)True,Card(Ace,Diamonds)True,Card(King,Diamonds)True]
     -- ===================================== --
     -- ===================================== --
     {- Paste the contents of this file, including this comment, into your source file, below all
