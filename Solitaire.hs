@@ -23,7 +23,7 @@ module Solitaire where
     --SPIDER SOLITAIRE
     data SCard = Card Card Bool 
     instance (Eq SCard) where
-        (Card card1 b1) == (Card card2 b2) = card1 == card2
+        (Card card1 b1) == (Card card2 b2) = card1 == card2 && b1 == b2
     instance (Show SCard) where
         show (Card c visible) = if visible then show c else "<unknown>"
     
@@ -432,13 +432,20 @@ module Solitaire where
     dealDeckToCols [] [] = []
     dealDeckToCols (c:cols) (d:cards) = ([d] ++ c):(dealDeckToCols cols cards)
 
-    -- deal 10 cards from stock, if there are no empty columns
+    -- deal 10 cards from stock, assuming there are no empty columns
     moveStockToCols :: Board -> Board
     moveStockToCols (SBoard f cols s) = SBoard f (dealDeckToCols cols cardsToDeal) newStock
         where 
             stock = getStock s
             cardsToDeal = map (toggleVisibility) (take 10 stock)
             newStock = Stock (drop 10 stock)
+
+    -- is this an ace through king sequence, assume first card is ace
+    isFullSequence :: Deck -> Bool
+    isFullSequence [card] = True
+    isFullSequence (d:deck) = (sCard d == head deck) && (isFullSequence deck)
+    -- if there is any ace to king sequence on a column, move it to Foundations
+    --moveAceToKingFound :: Board -> Board 
 
     ------------- INITIAL BOARDS -------------
     --initial layouts from the assignment brief
@@ -479,7 +486,9 @@ module Solitaire where
     
     
     ------------- TESTING BOARDS -------------
-
+    testDeck :: Deck 
+    testDeck = [Card (Ace,Spades) True, Card (Two,Spades) True, Card (Three,Spades) True, Card (Four,Spades) True ,Card (Five,Spades) True, Card (Six,Spades) True, 
+                        Card (Seven,Spades) True, Card (Eight,Spades) True, Card (Nine,Spades) True, Card (Ten,Spades) True, Card (Jack,Spades) False,Card (Queen,Spades) True, Card (King,Spades) True]
     testBoard :: Board 
     testBoard = EOBoard []
                     [[Card (Six,Clubs) True,Card(Seven,Diamonds)True,Card(Ace,Hearts) True,Card(Queen,Hearts) True,Card(King,Clubs) True,Card(Four,Spades)True],
@@ -509,7 +518,7 @@ module Solitaire where
                     [Card(King,Hearts)True,Card(Ten,Diamonds)True,Card(Seven,Spades)True,Card(Queen,Diamonds)True,Card(Five,Hearts)True,Card(Eight,Diamonds)True],
                     [Card(Eight,Clubs)True,Card(Six,Hearts)True,Card(Seven,Clubs)True,Card(Eight,Spades)True,Card(Ten,Clubs)True,Card(Queen,Clubs)True]]
 
-    testDeck = [Card(Ace,Spades)True,Card(Eight,Clubs)True,Card(Ace,Diamonds)True,Card(King,Diamonds)True]
+
     -- ===================================== --
     -- ===================================== --
     {- Paste the contents of this file, including this comment, into your source file, below all
