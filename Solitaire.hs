@@ -427,6 +427,8 @@ module Solitaire where
     getStock :: Stock -> Deck
     getStock (Stock d) = d 
 
+    getSuit :: SCard -> Suit
+    getSuit (Card (p,s) b) = s
     --given columns and a deck, deal each card of the deck to each column
     dealDeckToCols :: Columns -> Deck -> Columns
     dealDeckToCols [] [] = []
@@ -440,12 +442,18 @@ module Solitaire where
             cardsToDeal = map (toggleVisibility) (take 10 stock)
             newStock = Stock (drop 10 stock)
 
-    -- is this an ace through king sequence, assume first card is ace
+    isAnyFullSequenceCols :: Board -> (Suit, Bool)
+    isAnyFullSequenceCols (SBoard f (cols) s) = if (length seqCol > 0) then (getSuit (head (head seqCol)),True) else (Spades, False)
+        where 
+            seqCol = filter (\x -> (length x >=  12) && isFullSequence (take 12 x)) cols 
+    -- is this an ace through king sequence, assume first card is ace, and there are 12 cards in the deck
     isFullSequence :: Deck -> Bool
     isFullSequence [card] = True
     isFullSequence (d:deck) = (sCard d == head deck) && (isFullSequence deck)
     -- if there is any ace to king sequence on a column, move it to Foundations
-    --moveAceToKingFound :: Board -> Board 
+    -- moveAceToKingFound :: Board -> Board 
+    -- moveAceToKingFound (SBoard f (c:cols) s) 
+    --     | isAce (head c) && isFullSequence (take 12 c) = 
 
     ------------- INITIAL BOARDS -------------
     --initial layouts from the assignment brief
@@ -478,7 +486,9 @@ module Solitaire where
                         Card (Four, Clubs) True, Card (Five, Spades) True],
                     [Card (Seven, Spades) True, Card (Eight, Spades) True, Card (Nine, Spades) True, Card (Ten, Spades) True, Card (Jack, Spades) True, Card (Queen,Spades) True, Card (King,Spades) True, Card (Five,Clubs) False, Card (Ace,Diamonds) False, Card (Jack,Spades) False], -- 3 more here
                     [Card (Jack,Hearts) True, Card (Queen, Hearts) True],
-                    [Card (Ace,Clubs) True, Card (Two,Clubs) True]
+                    [Card (Ace,Clubs) True, Card (Two,Clubs) True],
+                    [Card (Ace,Spades) True, Card (Two,Spades) True, Card (Three,Spades) True, Card (Four,Spades) True ,Card (Five,Spades) True, Card (Six,Spades) True, 
+                        Card (Seven,Spades) True, Card (Eight,Spades) True, Card (Nine,Spades) True, Card (Ten,Spades) True, Card (Jack,Spades) True,Card (Queen,Spades) True, Card (King,Spades) True]
                     ]
                     (Stock [Card (Six, Clubs) False, Card (Nine, Diamonds) False, Card (Ten, Clubs) False, Card (Ace, Diamonds)False, Card (Three, Clubs) False, Card (Four, Spades) False, Card (Queen, Spades) False, Card (Six, Hearts) False,
                     Card (Three, Diamonds) False, Card (Six, Spades) False, Card (Ten,Spades) False, Card (King, Spades) False, Card (Eight, Hearts) False, Card (Six, Spades) False, Card (Four, Clubs) False, Card (Ace, Spades) False, 
