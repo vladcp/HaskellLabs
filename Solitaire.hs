@@ -271,7 +271,7 @@ module Solitaire where
     -- can the nth card in a column be moved to foundations?
     -- if yes, return first card of the column that contains that card
     isNthCardMoveable :: Columns -> Foundations -> Int -> (SCard,Bool)
-    isNthCardMoveable [] _ _ = ((Card (Three,Spades) False), False)
+    isNthCardMoveable [] _ _ = ((Card (Three,Spades) False), False) -- useless card
     isNthCardMoveable (headcol:restcols) found nth 
       | length headcol <= (nth) = isNthCardMoveable (filter (not.null) restcols) found nth
       | canBeMovedToFoundation (headcol !! nth) found = ((head headcol),True)
