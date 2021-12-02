@@ -387,7 +387,7 @@ module Solitaire where
     -- return the list of scores
     allScores :: Int -> Int -> [Int]
     allScores _ 0 = []
-    allScores seed nGames = [playSolitaire (eODeal seed)] ++ (allScores (seed + 1) (nGames - 1))
+    allScores seed nGames = [playSolitaire (eODeal seed)] ++ (allScores (seed + seed) (nGames - 1))
 
     averageScore :: [Int] -> Float
     averageScore xs = (fromIntegral (sum xs))/(fromIntegral (length xs))
