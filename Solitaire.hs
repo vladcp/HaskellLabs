@@ -167,43 +167,6 @@ module Solitaire where
 
     getFoundations :: Board -> Foundations
     getFoundations (EOBoard f c r) = f
-
-    -- try to move every reserve card to some column - output every outcome board
-    --fres and fcols store the reserves and columns (so far) at a certain point in the recursion
-    findMovesReserves :: Reserve -> Columns -> Board -> [Board] 
-    findMovesReserves fres fcols (EOBoard f [] r) = []
-    findMovesReserves fres fcols (EOBoard f (c:cols) (rCard:res))
-        | canMoveToColumn rCard c = [toFoundations (EOBoard f (fcols ++ ((moveToColumn rCard c):cols)) (fres ++ res))] 
-            ++ findMovesReserves (fres ++ [rCard]) [] (EOBoard f (fcols ++ (c:cols)) res)
-        | otherwise = findMovesReserves fres (fcols ++ [c]) (EOBoard f cols (rCard:res))
-
-    -- move every first card from every column to reserve - output every outcome board
-    -- fcols stores columns at a certain point in recursion
-    findMovesColstoRes :: Columns -> Board -> [Board]
-    findMovesColstoRes fcols (EOBoard f [] r) = []
-    findMovesColstoRes fcols (EOBoard f (c:cols) r)
-        | isReserveFull r = []
-        | otherwise =  [toFoundations(EOBoard f (fcols ++ (tail c):cols) (moveToReserve card r))] ++ 
-            findMovesColstoRes (fcols ++ [c]) (EOBoard f cols r)
-        where
-            card = head c
-    
-    -- NOTE TODO: if card under head card is movable to foundations -> then that's the best move
-    -- try to move every first card from every column to every other column - output every outcome board 
-    -- fcols contains all columns before current column in recursion
-    findMovesColstoCols :: Columns -> Board -> [Board]
-    findMovesColstoCols fcols (EOBoard f [] r) = []
-    findMovesColstoCols fcols (EOBoard f (c:cols) r)
-    -- (fcols ++ cols) - all columns except the one where the current card belongs
-        | canMoveToAnyColumn card (fcols ++ cols) = [toFoundations (EOBoard f (map (moveToColumn card) (fcols ++ (c:cols))) r)] ++
-            findMovesColstoCols (fcols ++ [c]) (EOBoard f cols r)
-            -- [EOBoard f fcols ++ ((tail c):((moveToColumn card currentCol):(tail cols)) r] 
-        | otherwise = findMovesColstoCols (fcols++[c]) (EOBoard f (cols) r)
-        where
-         card = head c
-         currentCol = head fcols
-
-    -- ===================================== --
 ---------- HELPER FUNCTIONS FOR NEXT MOVE CHOICE ----------
     getColHeads :: Columns -> Deck
     getColHeads [] = []
@@ -332,15 +295,9 @@ module Solitaire where
         where 
             cardToMove = head (getAllMovableCardsToCol (getColHeads cols) cols)
             newCols = filter (not.null) (moveToCorrectColumn cardToMove (getColumns (removeFromCol cardToMove board)))
-
-    -- CHOOSE THE NEXT MOVE -- 
-    --return a list of all possible board states after a single move
-    findMoves :: Board -> [Board]
-    findMoves b = findMovesColstoCols [] b ++ findMovesReserves [] [] b ++ 
-        findMovesColstoRes [] b 
     
-    findMoves' :: Board ->[Board]
-    findMoves' board@(EOBoard f cols res) =
+    findMoves :: Board ->[Board]
+    findMoves board@(EOBoard f cols res) =
         filter (/= (EOBoard [] [] []))
         [(if (board /= (toFoundations board)) then (toFoundations board) else (EOBoard [] [] [])),
         -- if the nth card of a column can move to foundations, move the cards on top of it to reserve, if possible
@@ -367,7 +324,7 @@ module Solitaire where
 
     chooseMove :: Board -> Maybe Board
     chooseMove b 
-        | length (findMoves' b) >= 1 = Just ((head (findMoves' b)))
+        | length (findMoves b) >= 1 = Just ((head (findMoves b)))
         | otherwise = Nothing 
 
     haveWon :: Board -> Bool
@@ -429,6 +386,7 @@ module Solitaire where
 
     getSuit :: SCard -> Suit
     getSuit (Card (p,s) b) = s
+    
     --given columns and a deck, deal each card of the deck to each column
     dealDeckToCols :: Columns -> Deck -> Columns
     dealDeckToCols [] [] = []
@@ -445,15 +403,25 @@ module Solitaire where
     isAnyFullSequenceCols :: Board -> (Suit, Bool)
     isAnyFullSequenceCols (SBoard f (cols) s) = if (length seqCol > 0) then (getSuit (head (head seqCol)),True) else (Spades, False)
         where 
-            seqCol = filter (\x -> (length x >=  12) && isFullSequence (take 12 x)) cols 
-    -- is this an ace through king sequence, assume first card is ace, and there are 12 cards in the deck
+            seqCol = filter (\x -> (length x >=  13) && isFullSequence (take 13 x)) cols 
+
+    -- is this an ace through king sequence, assume first card is ace, and there are 13 cards in the deck
     isFullSequence :: Deck -> Bool
     isFullSequence [card] = True
     isFullSequence (d:deck) = (sCard d == head deck) && (isFullSequence deck)
+
     -- if there is any ace to king sequence on a column, move it to Foundations
-    -- moveAceToKingFound :: Board -> Board 
-    -- moveAceToKingFound (SBoard f (c:cols) s) 
-    --     | isAce (head c) && isFullSequence (take 12 c) = 
+    moveAceToKingFound :: Board -> Board 
+    moveAceToKingFound (SBoard f cols s) = (SBoard newF newCols s)
+        where 
+            newCols = map(\x -> if (length x >= 13) && isAce (head x) && isFullSequence (take 13 x) then (drop 13 x) else x) cols 
+            allSuits = map (getSuit.head) (filter(\x -> (length x >= 13) && isAce (head x) && isFullSequence (take 13 x)) cols)
+            newF = f ++ (newKings allSuits)
+            newKings :: [Suit] -> [SCard]
+            newKings [] = []
+            newKings (suit:allSuits) = [Card (King,suit) True] ++ (newKings allSuits)
+
+                
 
     ------------- INITIAL BOARDS -------------
     --initial layouts from the assignment brief
